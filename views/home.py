@@ -86,7 +86,7 @@ col_modules, col_guide = st.columns([3, 2], gap="large")
 
 MODULES = [
     ("✅", "Utilization %",      "Team time utilisation vs. 35 h weekly target", True),
-    ("🔒", "Operational Health", "SLAs, resolution times, uptime metrics",        False),
+    ("✅", "Operational Health", "Project delivery status, weekly check-ins, health score", True),
     ("🔒", "Client Health",      "NPS, satisfaction scores, escalation tracking", False),
     ("🔒", "Process Compliance", "Checklist adherence and process audit results",  False),
     ("🔒", "Revenue per Head",   "Revenue efficiency and headcount ratios",        False),
@@ -116,10 +116,16 @@ with col_modules:
 with col_guide:
     st.markdown("### Quick Start")
     st.info(
+        "**Utilization %**\n\n"
         "**1.** Open **Utilization %** in the sidebar  \n"
         "**2.** Upload your Clockify Detailed Report CSV  \n"
         "**3.** Confirm the auto-detected week label  \n"
-        "**4.** Review all metrics and present in your L10 meeting"
+        "**4.** Review metrics and present in your L10 meeting\n\n"
+        "---\n\n"
+        "**Operational Health**\n\n"
+        "**1.** Add projects in **Project Management**  \n"
+        "**2.** PMs submit check-ins in **Weekly Check-in**  \n"
+        "**3.** Open **Operational Health → Dashboard** during L10"
     )
 
     st.markdown("### About ArkScore")
