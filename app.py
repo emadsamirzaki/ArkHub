@@ -17,12 +17,13 @@ pg = st.navigation(
             st.Page("views/home.py", title="Home", icon="🏠", default=True),
         ],
         "Utilization": [
-            st.Page("pages/1_Utilization.py", title="Utilization %", icon="✅"),
+            st.Page("pages/1_Utilization_Dashboard.py", title="Dashboard",      icon="📊"),
+            st.Page("pages/2_Utilization_Checkin.py",   title="Weekly Check-in", icon="📤"),
         ],
         "Operational Health": [
-            st.Page("pages/2_Operational_Health.py", title="Dashboard",            icon="📊"),
-            st.Page("pages/3_Project_Management.py",  title="Project Management", icon="⚙️"),
-            st.Page("pages/4_Weekly_Checkin.py",      title="Weekly Check-in",    icon="✍️"),
+            st.Page("pages/2_Operational_Health.py", title="Dashboard",          icon="📊"),
+            st.Page("pages/4_Weekly_Checkin.py",     title="Weekly Check-in",    icon="✍️"),
+            st.Page("pages/3_Project_Management.py", title="Project Management", icon="⚙️"),
         ],
         "Coming Soon": [
             st.Page("pages/5_Client_Health.py",      title="Client Health",      icon="🔒"),
