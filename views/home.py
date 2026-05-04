@@ -14,19 +14,23 @@ st.markdown(
 html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 
 .hero-title {
-    font-size: 3.2rem;
-    font-weight: 800;
-    background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+    font-size: 6.5rem !important;
+    font-weight: 900 !important;
+    background: linear-gradient(120deg, #60A5FA 0%, #A78BFA 40%, #F472B6 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    margin: 0 0 4px 0;
-    line-height: 1.1;
+    margin: 0 0 6px 0 !important;
+    line-height: 1.0 !important;
+    letter-spacing: -0.03em;
+    filter: drop-shadow(0 0 32px rgba(99,102,241,0.45));
+    display: block;
 }
 .hero-sub {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     color: #94A3B8;
     margin: 0 0 2rem 0;
+    letter-spacing: 0.02em;
 }
 .module-row {
     display: flex;
@@ -68,18 +72,78 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     margin-left: 8px;
     vertical-align: middle;
 }
+
+/* ── About card ─────────────────────────────── */
+.about-card {
+    background: linear-gradient(135deg, #0F2044 0%, #1E1B4B 100%);
+    border: 1px solid #3B82F6;
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 28px;
+}
+.about-card-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #93C5FD;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 14px 0;
+}
+.about-card-body {
+    color: #CBD5E1;
+    font-size: 0.93rem;
+    line-height: 1.75;
+    margin: 0 0 18px 0;
+}
+.about-pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+.about-pill {
+    background: #1E3A5F;
+    border: 1px solid #2563EB;
+    border-radius: 999px;
+    padding: 5px 14px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #93C5FD;
+}
 </style>
 """,
     unsafe_allow_html=True,
 )
 
 # ── Hero ──────────────────────────────────────────────────────────────────────
-st.markdown('<p class="hero-title">ArkScore</p>', unsafe_allow_html=True)
 st.markdown(
-    '<p class="hero-sub">EOS L10 Weekly Meeting Scorecard Dashboard</p>',
+    """
+<div style="margin-bottom: 20px;">
+  <img src="https://www.arkdev.net/icons/logo-dark.svg"
+       style="height: 72px; width: auto;" alt="ArkDev Logo" />
+</div>
+<p class="hero-title" style="text-align:center;">ArkScore</p>
+<p class="hero-sub" style="text-align:center;">EOS L10 Weekly Meeting Scorecard Dashboard</p>
+""",
     unsafe_allow_html=True,
 )
 st.markdown("---")
+
+# ── About ArkScore (full-width highlighted card) ─────────────────────────────
+st.markdown(
+    """
+<div class="about-card">
+  <p class="about-card-title">📌 About ArkScore</p>
+  <p class="about-card-body">
+    ArkScore is built on the <strong style="color:#93C5FD;">Entrepreneurial Operating System (EOS)</strong>
+    framework, giving leadership teams a single place to track and present key operational
+    metrics during weekly <strong style="color:#93C5FD;">L10 meetings</strong>.<br><br>
+    Each scorecard module maps to an EOS measurable. Active modules are fully interactive;
+    locked modules are on the roadmap and will unlock progressively.
+  </p>
+  <div class="about-pill-row">
+    <span class="about-pill">📅 Weekly L10 Meetings</span>
+    <span class="about-pill">📊 EOS Scorecards</span>
+  </div>
+</div>
+""",
+    unsafe_allow_html=True,
+)
 
 # ── Body ──────────────────────────────────────────────────────────────────────
 col_modules, col_guide = st.columns([3, 2], gap="large")
@@ -126,27 +190,4 @@ with col_guide:
         "**1.** Add projects in **Project Management**  \n"
         "**2.** PMs submit check-ins in **Weekly Check-in**  \n"
         "**3.** Open **Operational Health → Dashboard** during L10"
-    )
-
-    st.markdown("### About ArkScore")
-    st.markdown(
-        """
-Built on the **Entrepreneurial Operating System (EOS)** framework, ArkScore
-gives leadership teams a single place to track and present key operational
-metrics during weekly **L10 meetings**.
-
-Each scorecard module maps to an EOS measurable. Active modules are fully
-interactive; locked modules are on the roadmap.
-"""
-    )
-
-    st.markdown("### Framework")
-    st.markdown(
-        """
-| Threshold | Status |
-|-----------|--------|
-| ≥ 80 % | 🟢 On Target |
-| 60 – 79 % | 🟡 Watch |
-| < 60 % | 🔴 Critical |
-"""
     )
