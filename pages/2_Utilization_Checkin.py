@@ -55,21 +55,27 @@ def main() -> None:
     st.markdown("Upload a Clockify **Detailed Report** to save this week's utilization data.")
     st.markdown("---")
 
-    # ── Auto-detect current week ──────────────────────────────────────────────
-    auto_week  = current_week_label()
+    # ── Week date picker ──────────────────────────────────────────────────────
     from datetime import date
-    from utils.entry_store import week_bounds
-    sunday, thursday = week_bounds(date.today())
-
-    # ── Upload form ───────────────────────────────────────────────────────────
     st.markdown('<p class="section-heading">Upload Report</p>', unsafe_allow_html=True)
 
-    # Week label input (editable, defaults to current week)
-    week_label = st.text_input(
-        "Week Label",
-        value=auto_week,
-        help="Auto-detected from today's Sun–Thu week. Edit to upload a different week.",
-    )
+    col_wk, col_lbl, _ = st.columns([2, 4, 2])
+    with col_wk:
+        picked = st.date_input(
+            "Pick any day in the week",
+            value=date.today(),
+            help="Select any day — the full Sun–Thu week will be used.",
+        )
+    week_label = week_label_from_date(picked)
+    sunday, thursday = week_bounds(picked)
+    with col_lbl:
+        st.markdown(
+            f"<div style='padding-top:28px;font-size:.9rem;font-weight:600;"
+            f"color:#94A3B8;'>{week_label}</div>",
+            unsafe_allow_html=True,
+        )
+
+    auto_week = current_week_label()
 
     uploaded = st.file_uploader(
         "Clockify Detailed Report (.csv)",
@@ -118,28 +124,9 @@ def main() -> None:
                 return
 
         # ── Save ──────────────────────────────────────────────────────────────
-        # Use Thursday of selected week for week_start / week_end anchors.
-        # Determine bounds from the text_input week_label via today if it matches,
-        # otherwise fall back to parsing the label date range.
-        # Simplest reliable approach: use today's computed bounds if the label
-        # matches auto_week, otherwise attempt to extract from the CSV dates.
-        if week_label == auto_week:
-            w_start = sunday.isoformat()
-            w_end   = thursday.isoformat()
-        else:
-            # Try to derive bounds from the CSV's earliest Start Date
-            try:
-                df["_start_dt"] = pd.to_datetime(df["Start Date"], dayfirst=False, errors="coerce")
-                min_dt = df["_start_dt"].dropna().min()
-                if pd.notna(min_dt):
-                    anchor_date = min_dt.date()
-                    csv_sun, csv_thu = week_bounds(anchor_date)
-                    w_start = csv_sun.isoformat()
-                    w_end   = csv_thu.isoformat()
-                else:
-                    w_start = w_end = ""
-            except Exception:
-                w_start = w_end = ""
+        # sunday/thursday come directly from the date picker above.
+        w_start = sunday.isoformat()
+        w_end   = thursday.isoformat()
 
         # Drop any temporary helper columns and convert Timestamps to strings
         # so the data is JSON-serialisable.
