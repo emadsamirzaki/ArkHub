@@ -1,12 +1,6 @@
 """pages/2_Operational_Health.py — Placeholder"""
 import streamlit as st
 
-st.set_page_config(
-    page_title="Operational Health — ArkScore",
-    page_icon="🔒",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 st.markdown("# 🔒 Operational Health")
 st.markdown("---")

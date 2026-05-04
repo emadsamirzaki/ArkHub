@@ -1,12 +1,6 @@
 """pages/4_Process_Compliance.py — Placeholder"""
 import streamlit as st
 
-st.set_page_config(
-    page_title="Process Compliance — ArkScore",
-    page_icon="🔒",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 st.markdown("# 🔒 Process Compliance")
 st.markdown("---")

@@ -1,12 +1,6 @@
 """pages/5_Revenue_per_Head.py — Placeholder"""
 import streamlit as st
 
-st.set_page_config(
-    page_title="Revenue per Head — ArkScore",
-    page_icon="🔒",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 st.markdown("# 🔒 Revenue per Head")
 st.markdown("---")

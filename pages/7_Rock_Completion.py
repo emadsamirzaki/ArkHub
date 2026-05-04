@@ -1,12 +1,6 @@
 """pages/7_Rock_Completion.py — Placeholder"""
 import streamlit as st
 
-st.set_page_config(
-    page_title="Rock Completion — ArkScore",
-    page_icon="🔒",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 st.markdown("# 🔒 Rock Completion")
 st.markdown("---")

@@ -39,13 +39,6 @@ from utils.parse_clockify import (  # noqa: E402
     parse_clockify_csv,
 )
 
-# ── Page config ───────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="Utilization — ArkScore",
-    page_icon="📊",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 # ── Global CSS ────────────────────────────────────────────────────────────────
 st.markdown(

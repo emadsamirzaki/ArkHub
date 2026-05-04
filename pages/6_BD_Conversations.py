@@ -1,12 +1,6 @@
 """pages/6_BD_Conversations.py — Placeholder"""
 import streamlit as st
 
-st.set_page_config(
-    page_title="BD Conversations — ArkScore",
-    page_icon="🔒",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 st.markdown("# 🔒 BD Conversations")
 st.markdown("---")
