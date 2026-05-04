@@ -141,6 +141,14 @@ def main() -> None:
             except Exception:
                 w_start = w_end = ""
 
+        # Drop any temporary helper columns and convert Timestamps to strings
+        # so the data is JSON-serialisable.
+        df = df.drop(columns=[c for c in df.columns if c.startswith("_")], errors="ignore")
+        for col in df.select_dtypes(include=["datetime64[ns]", "datetime64[ns, UTC]", "datetimetz"]).columns:
+            df[col] = df[col].astype(str)
+        # Also handle object columns that may contain Timestamp instances
+        for col in df.select_dtypes(include="object").columns:
+            df[col] = df[col].apply(lambda v: str(v) if hasattr(v, "isoformat") else v)
         raw_rows = df.to_dict(orient="records")
         upsert_report(week_label, w_start, w_end, raw_rows)
 

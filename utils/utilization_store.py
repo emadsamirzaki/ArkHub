@@ -12,6 +12,15 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+
+def _default(obj):
+    """Fallback JSON serialiser for types the stdlib encoder can't handle."""
+    if hasattr(obj, "isoformat"):          # datetime, date, Timestamp
+        return obj.isoformat()
+    if hasattr(obj, "item"):               # numpy scalars
+        return obj.item()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
 DATA_DIR  = Path(__file__).parent.parent / "data"
 UTIL_FILE = DATA_DIR / "utilization_reports.json"
 
@@ -30,7 +39,7 @@ def _load() -> dict:
 def _save(data: dict) -> None:
     _ensure()
     UTIL_FILE.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+        json.dumps(data, indent=2, ensure_ascii=False, default=_default), encoding="utf-8"
     )
 
 
