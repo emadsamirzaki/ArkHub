@@ -1,6 +1,13 @@
 # ── Calculation constants ─────────────────────────────────────────────────────
 TARGET_HOURS: float = 35.0  # 7 hrs/day × 5 days/week
 
+# ── Project Managers ──────────────────────────────────────────────────────────
+PM_LIST: list[str] = [
+    "John Seleem",
+    "Mary Adel",
+    "Emad Samir",
+]
+
 # ── Status thresholds (%) ─────────────────────────────────────────────────────
 ON_TARGET_THRESHOLD: float = 80.0   # >= 80 %  → On Target
 WATCH_THRESHOLD: float     = 60.0   # 60–79 %  → Watch
