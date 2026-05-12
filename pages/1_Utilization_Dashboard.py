@@ -250,6 +250,16 @@ def main() -> None:
     # ── Section 2: Chart ──────────────────────────────────────────────────────
     st.markdown('<p class="section-heading">Team Utilization Chart</p>',
                 unsafe_allow_html=True)
+    st.markdown(
+        """<div style='display:flex;gap:20px;align-items:center;margin-bottom:10px;
+                       font-size:0.78rem;font-family:Inter,sans-serif;color:#94A3B8;'>
+  <span><span style='color:#22C55E;font-size:1rem;'>●</span>&nbsp;<b style='color:#CBD5E1;'>On Target</b>&nbsp;≥ 80%</span>
+  <span><span style='color:#F59E0B;font-size:1rem;'>●</span>&nbsp;<b style='color:#CBD5E1;'>Watch</b>&nbsp;60 – 79%</span>
+  <span><span style='color:#EF4444;font-size:1rem;'>●</span>&nbsp;<b style='color:#CBD5E1;'>Critical</b>&nbsp;&lt; 60%</span>
+  <span style='margin-left:6px;'>· Target = 35 hrs / week</span>
+</div>""",
+        unsafe_allow_html=True,
+    )
     st.plotly_chart(_utilization_chart(util_df), use_container_width=True)
 
     # ── Section 3: Detail table ───────────────────────────────────────────────
