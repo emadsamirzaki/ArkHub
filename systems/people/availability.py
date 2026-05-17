@@ -1,6 +1,6 @@
 """
 systems/people/availability.py
-Live availability dashboard — who is working now, from where, and today's timeline.
+Live availability dashboard — Google Calendar-style day view + right-now status.
 """
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ def to_12h(t: str) -> str:
     h12 = h % 12 or 12
     return f"{h12}:{m:02d} {period}"
 
+
 DAY_LABELS = {
     "sunday":    "Sunday",
     "monday":    "Monday",
@@ -41,42 +42,42 @@ DAY_LABELS = {
 TZ = ZoneInfo("Africa/Cairo")
 
 STATUS_META = {
-    "home":    {"label": "🏠 Working from Home",   "bg": "#14532D", "color": "#86EFAC"},
-    "office":  {"label": "🏢 In the Office",        "bg": "#1E3A5F", "color": "#93C5FD"},
-    "away":    {"label": "☕ Away / Break",          "bg": "#78350F", "color": "#FCD34D"},
-    "off":     {"label": "⚫ Not Working",           "bg": "#1E293B", "color": "#64748B"},
+    "home":   {"label": "🏠 Working from Home", "bg": "#14532D", "color": "#86EFAC"},
+    "office": {"label": "🏢 In the Office",      "bg": "#1E3A5F", "color": "#93C5FD"},
+    "away":   {"label": "☕ Away / Break",        "bg": "#78350F", "color": "#FCD34D"},
+    "off":    {"label": "⚫ Not Working",         "bg": "#1E293B", "color": "#64748B"},
 }
 
-# Timeline display range
-TIMELINE_START_H = 7
-TIMELINE_END_H   = 20
+# Calendar display range
+CAL_START_H = 7
+CAL_END_H   = 22
+
+HOUR_H  = 60    # px per hour
+GUTTER  = 56    # px — time-label column
+COL_W   = 150   # px — per employee column
+
+_LOC = {
+    "home":   ("🏠 Home",   "#14532D", "#22C55E", "#86EFAC"),
+    "office": ("🏢 Office", "#1E3A5F", "#3B82F6", "#93C5FD"),
+    "away":   ("☕ Away",   "#78350F", "#F59E0B", "#FCD34D"),
+}
 
 CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
-
 .section-heading {
     font-size: 0.75rem; font-weight: 700; color: #94A3B8;
     margin: 28px 0 14px 0; padding-bottom: 8px;
     border-bottom: 1px solid #334155;
     text-transform: uppercase; letter-spacing: 0.1em;
 }
-.now-card {
-    border-radius: 12px; padding: 16px 20px; margin-bottom: 10px;
-    border: 1px solid #334155;
-}
-.now-card-name  { font-weight: 700; font-size: 1rem; color: #F1F5F9; }
-.now-card-role  { font-size: 0.8rem; color: #94A3B8; margin-top: 2px; }
-.now-card-status{ font-size: 0.85rem; font-weight: 600; margin-top: 10px; }
-.next-row { background:#1E293B; border-radius:8px; padding:10px 14px; margin-bottom:6px; font-size:0.88rem; color:#CBD5E1; }
+.now-card { border-radius: 12px; padding: 16px 20px; margin-bottom: 10px; border: 1px solid #334155; }
+.now-card-name   { font-weight: 700; font-size: 1rem; color: #F1F5F9; }
+.now-card-role   { font-size: 0.8rem; color: #94A3B8; margin-top: 2px; }
+.now-card-status { font-size: 0.85rem; font-weight: 600; margin-top: 10px; }
+.next-row  { background:#1E293B; border-radius:8px; padding:10px 14px; margin-bottom:6px; font-size:0.88rem; color:#CBD5E1; }
 .next-time { color:#60A5FA; font-weight:700; }
-.tl-wrap  { margin-bottom: 6px; }
-.tl-label { font-size: 0.78rem; color: #94A3B8; width: 140px; display: inline-block; vertical-align: middle; }
-.tl-bar   { display: inline-block; vertical-align: middle; position: relative;
-            height: 20px; background: #1E293B; border-radius: 4px; overflow: hidden;
-            width: calc(100% - 150px); }
-.tl-now-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: #F472B6; z-index: 10; }
 </style>
 """
 
@@ -94,44 +95,146 @@ def _weekday_name(dt: datetime) -> str:
     return names[dt.weekday()]
 
 
-def _pct(time_str: str) -> float:
-    h, m = map(int, time_str.split(":"))
-    minutes = h * 60 + m
-    start_m = TIMELINE_START_H * 60
-    end_m   = TIMELINE_END_H   * 60
-    return max(0.0, min(100.0, (minutes - start_m) / (end_m - start_m) * 100))
+def _to_min(t: str) -> int:
+    h, m = map(int, t.split(":"))
+    return h * 60 + m
 
 
-LOC_COLORS = {"home": "#14532D", "office": "#1E3A5F", "away": "#78350F"}
+# ── Google Calendar-style day view ────────────────────────────────────────────
 
+def _section_calendar_day(employees: list[dict], day: str, now: datetime) -> None:
+    cal_s  = CAL_START_H * 60
+    cal_e  = CAL_END_H   * 60
+    n_h    = CAL_END_H - CAL_START_H
+    body_h = n_h * HOUR_H
 
-def _timeline_html(slots: list[dict], now_pct: float | None) -> str:
-    bar_blocks = ""
-    for s in slots:
-        left  = _pct(s["start"])
-        right = _pct(s["end"])
-        width = right - left
-        if width <= 0:
-            continue
-        color = LOC_COLORS.get(s["location"], "#334155")
-        bar_blocks += (
-            f'<div style="position:absolute;left:{left:.2f}%;width:{width:.2f}%;'
-            f'top:0;bottom:0;background:{color};"></div>'
-        )
-    marker = ""
-    if now_pct is not None and 0 <= now_pct <= 100:
-        marker = f'<div class="tl-now-marker" style="left:{now_pct:.2f}%"></div>'
+    now_min = now.hour * 60 + now.minute
+    now_top: float | None = (
+        (now_min - cal_s) / 60 * HOUR_H if cal_s <= now_min <= cal_e else None
+    )
 
-    return (
-        f'<div class="tl-bar">'
-        f'{bar_blocks}{marker}'
+    # ── Column headers ────────────────────────────────────────────────────────
+    col_heads = "".join(
+        f'<div style="width:{COL_W}px;flex-shrink:0;padding:10px 6px 8px;'
+        f'text-align:center;border-right:1px solid #1E293B;box-sizing:border-box;">'
+        f'<div style="font-size:0.8rem;font-weight:700;color:#F1F5F9;'
+        f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{emp["name"]}</div>'
+        f'<div style="font-size:0.65rem;color:#64748B;margin-top:1px;">{emp["role"]}</div>'
+        f'</div>'
+        for emp in employees
+    )
+    header = (
+        f'<div style="display:flex;background:#0F172A;border-bottom:2px solid #334155;'
+        f'position:sticky;top:0;z-index:10;">'
+        f'<div style="width:{GUTTER}px;flex-shrink:0;border-right:1px solid #1E293B;'
+        f'background:#0F172A;"></div>'
+        f'{col_heads}'
         f'</div>'
     )
 
+    # ── Time-label gutter ─────────────────────────────────────────────────────
+    hour_labels = "".join(
+        f'<div style="position:absolute;top:{i * HOUR_H}px;right:6px;'
+        f'transform:translateY(-50%);font-size:0.65rem;color:#475569;white-space:nowrap;">'
+        f'{to_12h(f"{CAL_START_H + i:02d}:00")}</div>'
+        for i in range(n_h + 1)
+    )
+    gutter_html = (
+        f'<div style="width:{GUTTER}px;flex-shrink:0;position:relative;'
+        f'border-right:1px solid #1E293B;">{hour_labels}</div>'
+    )
+
+    # ── Hour + half-hour gridlines ────────────────────────────────────────────
+    gridlines = ""
+    for i in range(n_h):
+        top  = i * HOUR_H
+        half = top + HOUR_H // 2
+        gridlines += (
+            f'<div style="position:absolute;left:0;right:0;top:{top}px;'
+            f'height:1px;background:#1E293B;z-index:1;"></div>'
+            f'<div style="position:absolute;left:0;right:0;top:{half}px;'
+            f'height:1px;background:#0F2030;z-index:1;"></div>'
+        )
+    gridlines += (
+        f'<div style="position:absolute;left:0;right:0;top:{n_h * HOUR_H}px;'
+        f'height:1px;background:#1E293B;z-index:1;"></div>'
+    )
+
+    # ── "Now" indicator line + dot ────────────────────────────────────────────
+    now_line = ""
+    if now_top is not None:
+        now_line = (
+            f'<div style="position:absolute;left:0;right:0;top:{now_top:.1f}px;'
+            f'height:2px;background:#F472B6;z-index:12;pointer-events:none;">'
+            f'<div style="position:absolute;left:-5px;top:-4px;width:10px;height:10px;'
+            f'border-radius:50%;background:#F472B6;"></div>'
+            f'</div>'
+        )
+
+    # ── Employee event columns ────────────────────────────────────────────────
+    emp_cols = ""
+    for emp in employees:
+        pat   = get_pattern(emp["id"])
+        slots = pat["patterns"].get(day, []) if pat else []
+
+        events = ""
+        for slot in slots:
+            s_m = max(_to_min(slot["start"]), cal_s)
+            e_m = min(_to_min(slot["end"]),   cal_e)
+            if e_m <= s_m:
+                continue
+
+            top_px = (s_m - cal_s) / 60 * HOUR_H
+            h_px   = max((e_m - s_m) / 60 * HOUR_H - 3, 4)
+            loc    = slot.get("location", "home")
+            lbl, bg, border_c, fg = _LOC.get(loc, ("", "#1E293B", "#475569", "#94A3B8"))
+
+            label_html = lbl if h_px >= 18 else ""
+            time_html  = (
+                f'<div style="font-size:0.62rem;opacity:0.75;margin-top:1px;">'
+                f'{to_12h(slot["start"])} – {to_12h(slot["end"])}</div>'
+                if h_px >= 34 else ""
+            )
+
+            events += (
+                f'<div style="position:absolute;top:{top_px:.1f}px;height:{h_px:.1f}px;'
+                f'left:4px;right:4px;background:{bg};border-left:3px solid {border_c};'
+                f'border-radius:5px;padding:3px 6px;font-size:0.73rem;font-weight:600;'
+                f'color:{fg};overflow:hidden;z-index:5;box-sizing:border-box;">'
+                f'{label_html}{time_html}'
+                f'</div>'
+            )
+
+        emp_cols += (
+            f'<div style="width:{COL_W}px;flex-shrink:0;position:relative;'
+            f'border-right:1px solid #1E293B;z-index:2;">{events}</div>'
+        )
+
+    min_w = GUTTER + COL_W * len(employees)
+
+    html = (
+        f'<div style="border:1px solid #1E293B;border-radius:12px;overflow:hidden;'
+        f'background:#0F172A;font-family:Inter,sans-serif;">'
+        f'<div style="overflow-x:auto;overflow-y:auto;max-height:640px;">'
+        f'<div style="min-width:{min_w}px;">'
+        f'{header}'
+        f'<div style="display:flex;height:{body_h}px;">'
+        f'{gutter_html}'
+        f'<div style="position:relative;flex:1;display:flex;">'
+        f'{gridlines}{now_line}{emp_cols}'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
+
+
+# ── Right-now status cards ────────────────────────────────────────────────────
 
 def _section_now(employees: list[dict], day: str, time_str: str) -> None:
     st.markdown('<p class="section-heading">Right Now</p>', unsafe_allow_html=True)
-
     cols = st.columns(4)
     for i, emp in enumerate(employees):
         status = get_status_now(emp["id"], day, time_str)
@@ -148,10 +251,12 @@ def _section_now(employees: list[dict], day: str, time_str: str) -> None:
             )
 
 
+# ── Upcoming transitions within the next hour ─────────────────────────────────
+
 def _section_next_hour(employees: list[dict], day: str, now: datetime) -> None:
-    time_str     = _time_str(now)
-    future_str   = _time_str(now + timedelta(hours=1))
-    changes      = []
+    time_str   = _time_str(now)
+    future_str = _time_str(now + timedelta(hours=1))
+    changes: list[tuple] = []
 
     for emp in employees:
         trans = get_next_transition(emp["id"], day, time_str)
@@ -172,38 +277,18 @@ def _section_next_hour(employees: list[dict], day: str, now: datetime) -> None:
     changes.sort()
     st.markdown('<p class="section-heading">Changes in the Next Hour</p>', unsafe_allow_html=True)
     for at_time, name, verb, new_status in changes:
-        meta  = STATUS_META[new_status]
-        label = meta["label"]
+        meta = STATUS_META[new_status]
         st.markdown(
             f'<div class="next-row">'
-            f'<b>{name}</b> — {verb} <span style="color:{meta["color"]};">{label}</span> '
+            f'<b>{name}</b> — {verb} '
+            f'<span style="color:{meta["color"]};">{meta["label"]}</span> '
             f'at <span class="next-time">{to_12h(at_time)}</span>'
             f'</div>',
             unsafe_allow_html=True,
         )
 
 
-def _section_timeline(employees: list[dict], day: str, now: datetime) -> None:
-    st.markdown('<p class="section-heading">Today\'s Timeline</p>', unsafe_allow_html=True)
-
-    now_pct = _pct(_time_str(now))
-    hour_labels = "  ".join(
-        to_12h(f"{h:02d}:00") for h in range(TIMELINE_START_H, TIMELINE_END_H + 1, 2)
-    )
-    st.caption(f"← {hour_labels} →   (pink line = now)")
-
-    for emp in employees:
-        pat   = get_pattern(emp["id"])
-        slots = pat["patterns"].get(day, []) if pat else []
-        tl    = _timeline_html(slots, now_pct)
-        st.markdown(
-            f'<div class="tl-wrap">'
-            f'<span class="tl-label">{emp["name"]}</span>'
-            f'{tl}'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-
+# ── Full schedule expandable ──────────────────────────────────────────────────
 
 def _section_employee_details(employees: list[dict]) -> None:
     st.markdown('<p class="section-heading">Employee Schedules</p>', unsafe_allow_html=True)
@@ -218,12 +303,14 @@ def _section_employee_details(employees: list[dict]) -> None:
                     st.markdown(f"**{DAY_LABELS[day]}:** {format_slots(slots)}")
 
 
+# ── Main ──────────────────────────────────────────────────────────────────────
+
 def main() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
 
-    now     = _now()
-    day     = _weekday_name(now)
-    time_str = _time_str(now)
+    now        = _now()
+    day        = _weekday_name(now)
+    time_str   = _time_str(now)
     is_workday = day in DAYS
 
     st.markdown("# 📍 Availability Now")
@@ -241,15 +328,21 @@ def main() -> None:
         return
 
     if not is_workday:
-        st.warning(f"Today is {day_display} — outside the work week (Sun–Thu). Showing schedules below.")
+        st.warning(
+            f"Today is {day_display} — outside the work week (Sun–Thu). Showing schedules below."
+        )
         _section_employee_details(employees)
         return
 
+    st.markdown('<p class="section-heading">Day Calendar</p>', unsafe_allow_html=True)
+    _section_calendar_day(employees, day, now)
+
+    st.markdown("")
     _section_now(employees, day, time_str)
+
     st.markdown("")
     _section_next_hour(employees, day, now)
-    st.markdown("")
-    _section_timeline(employees, day, now)
+
     st.markdown("")
     _section_employee_details(employees)
 
