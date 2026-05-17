@@ -1,11 +1,9 @@
 """
-views/home.py — ArkScore home page content
-(st.set_page_config is handled by app.py via st.navigation)
+views/home.py — ArkHub platform homepage
 """
 
 import streamlit as st
 
-# ── Styles ────────────────────────────────────────────────────────────────────
 st.markdown(
     """
 <style>
@@ -13,97 +11,102 @@ st.markdown(
 
 html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 
-.hero-title {
-    font-size: 6.5rem !important;
+@keyframes gradientFlow {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+@keyframes heroFadeUp {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes subFadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes glowPulse {
+    0%, 100% { filter: drop-shadow(0 0 18px rgba(96,165,250,0.4)) drop-shadow(0 0 48px rgba(167,139,250,0.2)); }
+    50%       { filter: drop-shadow(0 0 36px rgba(96,165,250,0.7)) drop-shadow(0 0 80px rgba(167,139,250,0.4)); }
+}
+
+.platform-hero {
+    text-align: center;
+    padding: 48px 0 20px 0;
+    width: 100%;
+    overflow: visible;
+}
+.platform-title {
+    font-size: 10vw !important;
     font-weight: 900 !important;
-    background: linear-gradient(120deg, #60A5FA 0%, #A78BFA 40%, #F472B6 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin: 0 0 6px 0 !important;
+    white-space: nowrap !important;
+    display: block !important;
+    background: linear-gradient(270deg, #60A5FA, #A78BFA, #F472B6, #A78BFA, #60A5FA) !important;
+    background-size: 300% 300% !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    margin: 0 0 16px 0 !important;
     line-height: 1.0 !important;
-    letter-spacing: -0.03em;
-    filter: drop-shadow(0 0 32px rgba(99,102,241,0.45));
-    display: block;
+    letter-spacing: -0.04em !important;
+    animation:
+        heroFadeUp   0.7s cubic-bezier(0.22,1,0.36,1) both,
+        gradientFlow 5s ease infinite,
+        glowPulse    3s ease-in-out infinite;
 }
-.hero-sub {
-    font-size: 1.15rem;
-    color: #94A3B8;
-    margin: 0 0 2rem 0;
-    letter-spacing: 0.02em;
+.platform-sub {
+    font-size: 1.2rem !important;
+    color: #94A3B8 !important;
+    margin: 0 0 2.5rem 0 !important;
+    animation: subFadeUp 0.9s 0.2s cubic-bezier(0.22,1,0.36,1) both;
+    letter-spacing: 0.02em !important;
 }
-.module-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
+
+.system-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 16px;
+    margin-top: 8px;
+}
+.system-card {
     background: #1E293B;
     border: 1px solid #334155;
-    border-radius: 12px;
-    padding: 14px 18px;
-    margin-bottom: 10px;
-    transition: border-color 0.2s;
+    border-radius: 16px;
+    padding: 24px 22px;
+    transition: border-color 0.2s, transform 0.15s;
+    cursor: default;
+    text-decoration: none;
+    display: block;
 }
-.module-row.active {
+.system-card.active {
     border-color: #3B82F6;
-    background: #172554;
+    background: linear-gradient(135deg, #172554 0%, #1e1b4b 100%);
+    cursor: pointer;
 }
-.module-icon { font-size: 1.5rem; line-height: 1; padding-top: 2px; }
-.module-name { font-weight: 600; font-size: 0.95rem; color: #E2E8F0; }
-.module-desc { font-size: 0.8rem; color: #64748B; margin-top: 2px; }
-.module-badge-active {
+.system-card.active:hover {
+    border-color: #60A5FA;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(59,130,246,0.25);
+}
+.system-card-icon  { font-size: 2rem; margin-bottom: 10px; }
+.system-card-name  { font-size: 1.05rem; font-weight: 700; color: #F1F5F9; margin: 0 0 4px 0; }
+.system-card-desc  { font-size: 0.82rem; color: #64748B; margin: 0 0 14px 0; line-height: 1.5; }
+.badge-active {
     display: inline-block;
     background: #1D4ED8;
     color: #BFDBFE;
     font-size: 0.7rem;
-    font-weight: 600;
-    padding: 2px 8px;
+    font-weight: 700;
+    padding: 3px 10px;
     border-radius: 999px;
-    margin-left: 8px;
-    vertical-align: middle;
 }
-.module-badge-soon {
+.badge-soon {
     display: inline-block;
     background: #334155;
     color: #94A3B8;
     font-size: 0.7rem;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 999px;
-    margin-left: 8px;
-    vertical-align: middle;
-}
-
-/* ── About card ─────────────────────────────── */
-.about-card {
-    background: linear-gradient(135deg, #0F2044 0%, #1E1B4B 100%);
-    border: 1px solid #3B82F6;
-    border-radius: 16px;
-    padding: 28px 32px;
-    margin-bottom: 28px;
-}
-.about-card-title {
-    font-size: 1.05rem;
     font-weight: 700;
-    color: #93C5FD;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin: 0 0 14px 0;
-}
-.about-card-body {
-    color: #CBD5E1;
-    font-size: 0.93rem;
-    line-height: 1.75;
-    margin: 0 0 18px 0;
-}
-.about-pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
-.about-pill {
-    background: #1E3A5F;
-    border: 1px solid #2563EB;
+    padding: 3px 10px;
     border-radius: 999px;
-    padding: 5px 14px;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #93C5FD;
 }
 </style>
 """,
@@ -115,79 +118,68 @@ st.markdown(
     """
 <div style="margin-bottom: 20px;">
   <img src="https://www.arkdev.net/icons/logo-dark.svg"
-       style="height: 72px; width: auto;" alt="ArkDev Logo" />
+       style="height: 56px; width: auto; opacity: 0.85;" alt="ArkDev Logo" />
 </div>
-<p class="hero-title" style="text-align:center;">ArkScore</p>
-<p class="hero-sub" style="text-align:center;">EOS L10 Weekly Meeting Scorecard Dashboard</p>
+<div class="platform-hero">
+  <div class="platform-title">ArkHub</div>
+  <div class="platform-sub">All company tools — for employees, HR, and leadership</div>
+</div>
 """,
     unsafe_allow_html=True,
 )
 st.markdown("---")
 
-# ── About ArkScore (full-width highlighted card) ─────────────────────────────
-st.markdown(
-    """
-<div class="about-card">
-  <p class="about-card-title">📌 About ArkScore</p>
-  <p class="about-card-body">
-    ArkScore is built on the <strong style="color:#93C5FD;">Entrepreneurial Operating System (EOS)</strong>
-    framework, giving leadership teams a single place to track and present key operational
-    metrics during weekly <strong style="color:#93C5FD;">L10 meetings</strong>.<br><br>
-    Each scorecard module maps to an EOS measurable. Active modules are fully interactive;
-    locked modules are on the roadmap and will unlock progressively.
-  </p>
-  <div class="about-pill-row">
-    <span class="about-pill">📅 Weekly L10 Meetings</span>
-    <span class="about-pill">📊 EOS Scorecards</span>
-  </div>
-</div>
-""",
-    unsafe_allow_html=True,
-)
+# ── Systems grid ──────────────────────────────────────────────────────────────
+st.markdown("### Systems")
 
-# ── Body ──────────────────────────────────────────────────────────────────────
-col_modules, col_guide = st.columns([3, 2], gap="large")
-
-MODULES = [
-    ("✅", "Utilization %",      "Team time utilisation vs. 35 h weekly target", True),
-    ("✅", "Operational Health", "Project delivery status, weekly check-ins, health score", True),
-    ("🔒", "Client Health",      "NPS, satisfaction scores, escalation tracking", False),
-    ("🔒", "Process Compliance", "Checklist adherence and process audit results",  False),
-    ("🔒", "Revenue per Head",   "Revenue efficiency and headcount ratios",        False),
-    ("🔒", "BD Conversations",   "Pipeline activity, outreach, and conversion",    False),
-    ("🔒", "Rock Completion",    "Quarterly rock progress and completion rates",    False),
+SYSTEMS = [
+    {
+        "icon":   "📊",
+        "name":   "ArkScore",
+        "desc":   "EOS L10 weekly scorecard — utilization, operational health, and project tracking.",
+        "active": True,
+        "url":    "/arkscore",
+    },
+    {
+        "icon":   "👥",
+        "name":   "HR System",
+        "desc":   "Leave management, performance reviews, and employee records.",
+        "active": False,
+    },
+    {
+        "icon":   "💰",
+        "name":   "Finance",
+        "desc":   "Revenue tracking, headcount ratios, and financial reporting.",
+        "active": False,
+    },
+    {
+        "icon":   "🤝",
+        "name":   "BD & Pipeline",
+        "desc":   "Business development conversations, pipeline activity, and conversion tracking.",
+        "active": False,
+    },
 ]
 
-with col_modules:
-    st.markdown("### Scorecard Modules")
-    for icon, name, desc, active in MODULES:
-        row_class   = "module-row active" if active else "module-row"
-        badge_class = "module-badge-active" if active else "module-badge-soon"
-        badge_text  = "Active" if active else "Coming Soon"
-        st.markdown(
-            f"""
-<div class="{row_class}">
-  <div class="module-icon">{icon}</div>
-  <div>
-    <span class="module-name">{name}</span>
-    <span class="{badge_class}">{badge_text}</span>
-    <div class="module-desc">{desc}</div>
-  </div>
-</div>""",
-            unsafe_allow_html=True,
-        )
+cards_html = '<div class="system-grid">'
+for s in SYSTEMS:
+    card_class  = "system-card active" if s["active"] else "system-card"
+    badge_class = "badge-active" if s["active"] else "badge-soon"
+    badge_text  = "Active" if s["active"] else "Coming Soon"
+    inner = f"""
+  <div class="system-card-icon">{s['icon']}</div>
+  <p class="system-card-name">{s['name']}</p>
+  <p class="system-card-desc">{s['desc']}</p>
+  <span class="{badge_class}">{badge_text}</span>"""
+    if s.get("url"):
+        cards_html += f'<a href="{s["url"]}" class="{card_class}" target="_self">{inner}</a>'
+    else:
+        cards_html += f'<div class="{card_class}">{inner}</div>'
+cards_html += "</div>"
 
-with col_guide:
-    st.markdown("### Quick Start")
-    st.info(
-        "**Utilization %**\n\n"
-        "**1.** Open **Utilization %** in the sidebar  \n"
-        "**2.** Upload your Clockify Detailed Report CSV  \n"
-        "**3.** Confirm the auto-detected week label  \n"
-        "**4.** Review metrics and present in your L10 meeting\n\n"
-        "---\n\n"
-        "**Operational Health**\n\n"
-        "**1.** Add projects in **Project Management**  \n"
-        "**2.** PMs submit check-ins in **Weekly Check-in**  \n"
-        "**3.** Open **Operational Health → Dashboard** during L10"
-    )
+st.markdown(cards_html, unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown(
+    "<p style='font-size:0.8rem;color:#475569;'>Click an active system card to open it, or use the sidebar to navigate.</p>",
+    unsafe_allow_html=True,
+)

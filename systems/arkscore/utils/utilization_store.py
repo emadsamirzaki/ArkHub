@@ -1,8 +1,7 @@
 """
 utils/utilization_store.py
-Persist weekly Clockify reports as JSON so any past week can be reviewed.
-Structure: { week_label: { id, week_label, week_start, week_end,
-                            uploaded_at, raw_rows } }
+Persist weekly Clockify reports as JSON.
+Structure: { week_label: { id, week_label, week_start, week_end, uploaded_at, raw_rows } }
 """
 
 from __future__ import annotations
@@ -14,12 +13,12 @@ from pathlib import Path
 
 
 def _default(obj):
-    """Fallback JSON serialiser for types the stdlib encoder can't handle."""
-    if hasattr(obj, "isoformat"):          # datetime, date, Timestamp
+    if hasattr(obj, "isoformat"):
         return obj.isoformat()
-    if hasattr(obj, "item"):               # numpy scalars
+    if hasattr(obj, "item"):
         return obj.item()
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
 
 DATA_DIR  = Path(__file__).parent.parent / "data"
 UTIL_FILE = DATA_DIR / "utilization_reports.json"
@@ -44,7 +43,6 @@ def _save(data: dict) -> None:
 
 
 def get_all_reports() -> list[dict]:
-    """Return all reports sorted by week_start descending (most recent first)."""
     data = _load()
     reports = list(data.values())
     reports.sort(key=lambda r: r.get("week_start", ""), reverse=True)
@@ -52,7 +50,6 @@ def get_all_reports() -> list[dict]:
 
 
 def get_all_week_labels() -> list[str]:
-    """Week labels sorted by week_start descending."""
     return [r["week_label"] for r in get_all_reports()]
 
 

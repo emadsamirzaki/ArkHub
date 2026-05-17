@@ -1,6 +1,6 @@
 """
 utils/entry_store.py
-Load / save weekly check-in entries from data/entries.json.
+Load / save weekly check-in entries.
 """
 
 from __future__ import annotations
@@ -74,17 +74,11 @@ def upsert_entry(
 
 
 def get_all_weeks() -> list[str]:
-    """Distinct week labels, most-recent first (reverse-lexicographic)."""
     entries = load_entries()
     return sorted({e["week_label"] for e in entries}, reverse=True)
 
 
 def week_bounds(d: date) -> tuple[date, date]:
-    """Return (sunday, thursday) for the Sun–Thu week that contains *d*.
-
-    weekday(): Mon=0 … Sun=6
-    Days since Sunday: (weekday + 1) % 7
-    """
     days_since_sunday = (d.weekday() + 1) % 7
     sunday   = d - timedelta(days=days_since_sunday)
     thursday = sunday + timedelta(days=4)
@@ -92,29 +86,22 @@ def week_bounds(d: date) -> tuple[date, date]:
 
 
 def week_label_from_date(d: date) -> str:
-    """Return a label like '2026-W19 – May 3 – 7, 2026' for the Sun–Thu week
-    that contains *d*.
-
-    ISO week number follows the standard library (Monday-based), so we use
-    Thursday's ISO week to get a stable, unambiguous number for Sun–Thu weeks.
-    """
     sunday, thursday = week_bounds(d)
     iso_week = thursday.isocalendar()[1]
     iso_year = thursday.isocalendar()[0]
 
     if sunday.month == thursday.month:
         date_range = (
-            f"{sunday.strftime('%b')} {sunday.day} \u2013 {thursday.day}, {thursday.year}"
+            f"{sunday.strftime('%b')} {sunday.day} – {thursday.day}, {thursday.year}"
         )
     else:
         date_range = (
-            f"{sunday.strftime('%b')} {sunday.day} \u2013 "
+            f"{sunday.strftime('%b')} {sunday.day} – "
             f"{thursday.strftime('%b')} {thursday.day}, {thursday.year}"
         )
 
-    return f"{iso_year}-W{iso_week:02d} \u2013 {date_range}"
+    return f"{iso_year}-W{iso_week:02d} – {date_range}"
 
 
 def current_week_label() -> str:
-    """Return the week label for the current Sun–Thu week."""
     return week_label_from_date(date.today())

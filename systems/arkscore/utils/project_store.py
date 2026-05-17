@@ -1,6 +1,6 @@
 """
 utils/project_store.py
-Load / save project data from data/projects.json.
+Load / save project data.
 """
 
 from __future__ import annotations

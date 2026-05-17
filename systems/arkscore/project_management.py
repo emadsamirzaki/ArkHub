@@ -1,22 +1,15 @@
 """
-pages/3_Project_Management.py
-Admin view — create, edit, deactivate and reactivate projects
-for the Operational Health module.
+systems/arkscore/project_management.py
+Admin view — create, edit, deactivate and reactivate projects.
 """
 
 from __future__ import annotations
 
-import os
-import sys
-
 import streamlit as st
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from systems.arkscore.utils.constants import PM_LIST
+from systems.arkscore.utils.project_store import add_project, load_projects, update_project
 
-from utils.constants import PM_LIST
-from utils.project_store import add_project, load_projects, update_project
-
-# ── CSS ───────────────────────────────────────────────────────────────────────
 CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -32,19 +25,15 @@ html,body,[class*="css"]{font-family:'Inter',sans-serif!important}
 .pm-inactive{color:#64748B;font-weight:600;font-size:.85rem;}
 .pm-th{font-size:.75rem;font-weight:700;color:#94A3B8;text-transform:uppercase;
        letter-spacing:.05em;}
-.pm-row-div{margin:0;border:none;border-top:1px solid #1E293B;padding:0;}
 </style>
 """
 
-
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     st.markdown("# ⚙️ Project Management")
     st.markdown("---")
 
-    # ── Add project form ──────────────────────────────────────────────────────
     st.markdown('<p class="pm-section">Add New Project</p>', unsafe_allow_html=True)
 
     with st.form("add_project_form", clear_on_submit=True):
@@ -54,9 +43,7 @@ def main() -> None:
         with c2:
             new_pm = st.selectbox("PM Name *", PM_LIST)
         with c3:
-            new_status = st.radio(
-                "Status", ["Active", "Inactive"], horizontal=True, index=0
-            )
+            new_status = st.radio("Status", ["Active", "Inactive"], horizontal=True, index=0)
         submitted = st.form_submit_button("Save Project", type="primary")
 
     if submitted:
@@ -73,7 +60,6 @@ def main() -> None:
             st.success(f'✅ Project "{new_name.strip()}" added.')
             st.rerun()
 
-    # ── Project table ─────────────────────────────────────────────────────────
     st.markdown('<p class="pm-section">All Projects</p>', unsafe_allow_html=True)
 
     projects = load_projects()
@@ -81,7 +67,6 @@ def main() -> None:
         st.info("No projects yet. Use the form above to add your first project.")
         return
 
-    # Column headers
     h = st.columns([3, 2, 1.5, 1.5, 2.5])
     for col, label in zip(h, ["Project Name", "PM", "Status", "Created", "Actions"]):
         col.markdown(f'<span class="pm-th">{label}</span>', unsafe_allow_html=True)
@@ -91,7 +76,6 @@ def main() -> None:
 
     for p in projects:
         if edit_id == p["id"]:
-            # ── Inline edit form ───────────────────────────────────────────────
             with st.form(f"edit_form_{p['id']}"):
                 ec1, ec2, ec3 = st.columns([3, 2, 2])
                 with ec1:
@@ -101,8 +85,7 @@ def main() -> None:
                     e_pm = st.selectbox("PM", PM_LIST, index=pm_idx)
                 with ec3:
                     e_status = st.radio(
-                        "Status",
-                        ["Active", "Inactive"],
+                        "Status", ["Active", "Inactive"],
                         index=0 if p["status"] == "Active" else 1,
                         horizontal=True,
                     )
@@ -116,12 +99,7 @@ def main() -> None:
                 if not e_name.strip():
                     st.error("Project Name is required.")
                 else:
-                    update_project(
-                        p["id"],
-                        name=e_name.strip(),
-                        pm=e_pm.strip(),
-                        status=e_status,
-                    )
+                    update_project(p["id"], name=e_name.strip(), pm=e_pm.strip(), status=e_status)
                     st.session_state.pop("pm_edit_id", None)
                     st.success(f'✅ "{e_name.strip()}" updated.')
                     st.rerun()
@@ -130,29 +108,19 @@ def main() -> None:
                 st.rerun()
 
         else:
-            # ── Read-only row ──────────────────────────────────────────────────
             r = st.columns([3, 2, 1.5, 1.5, 2.5])
             r[0].markdown(p["name"])
             r[1].markdown(p["pm"])
-
             if p["status"] == "Active":
-                r[2].markdown(
-                    '<span class="pm-active">🟢 Active</span>',
-                    unsafe_allow_html=True,
-                )
+                r[2].markdown('<span class="pm-active">🟢 Active</span>', unsafe_allow_html=True)
             else:
-                r[2].markdown(
-                    '<span class="pm-inactive">⚫ Inactive</span>',
-                    unsafe_allow_html=True,
-                )
-
+                r[2].markdown('<span class="pm-inactive">⚫ Inactive</span>', unsafe_allow_html=True)
             r[3].markdown(p.get("created_at", "—"))
 
             a1, a2, _ = r[4].columns([1, 1.2, 0.3])
             if a1.button("✏️ Edit", key=f"edit_btn_{p['id']}"):
                 st.session_state["pm_edit_id"] = p["id"]
                 st.rerun()
-
             if p["status"] == "Active":
                 if a2.button("🔒 Deactivate", key=f"deact_{p['id']}"):
                     update_project(p["id"], status="Inactive")

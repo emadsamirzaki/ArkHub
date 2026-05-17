@@ -1,23 +1,15 @@
 """
-pages/1_Utilization_Dashboard.py
-----------------------------------
+systems/arkscore/utilization_dashboard.py
 Utilization % Dashboard — week selector + WoW comparison.
-Data loaded from data/utilization_reports.json via utilization_store.
-Upload new weeks via the Utilization > Weekly Check-in page.
 """
 
 from __future__ import annotations
-
-import os
-import sys
 
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from utils.constants import (
+from systems.arkscore.utils.constants import (
     COLOR_CRITICAL,
     COLOR_ON_TARGET,
     COLOR_WATCH,
@@ -25,8 +17,8 @@ from utils.constants import (
     TARGET_HOURS,
     WATCH_THRESHOLD,
 )
-from utils.parse_clockify import calculate_utilization, get_project_breakdown
-from utils.utilization_store import get_all_reports, get_all_week_labels, get_report
+from systems.arkscore.utils.parse_clockify import calculate_utilization, get_project_breakdown
+from systems.arkscore.utils.utilization_store import get_all_reports, get_all_week_labels, get_report
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown(
@@ -190,7 +182,7 @@ def main() -> None:
 
     if not week_labels:
         st.info(
-            "No data yet. Go to **Utilization → Weekly Check-in** to upload a Clockify report."
+            "No data yet. Go to **ArkScore → Utilization Check-in** to upload a Clockify report."
         )
         return
 
@@ -326,7 +318,7 @@ def main() -> None:
         current_start = report.get("week_start", "")
         prev_reports  = [r for r in all_reports if r.get("week_start", "") < current_start]
         if prev_reports:
-            prev_report = prev_reports[0]  # sorted desc, so first = nearest previous
+            prev_report = prev_reports[0]
             st.markdown(
                 f'<p class="section-heading">Week-over-Week Comparison '
                 f'<span style="font-weight:400;color:#64748B;text-transform:none;'

@@ -1,12 +1,12 @@
 """
-app.py — ArkScore navigation controller
+app.py — ArkHub navigation controller
 """
 
 import streamlit as st
 
 st.set_page_config(
-    page_title="ArkScore",
-    page_icon="📊",
+    page_title="ArkHub",
+    page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -14,24 +14,23 @@ st.set_page_config(
 pg = st.navigation(
     {
         "": [
-            st.Page("views/home.py", title="Home", icon="🏠", default=True),
+            st.Page("views/home.py", title="Home", icon="🏠", default=True, url_path=""),
         ],
-        "Utilization": [
-            st.Page("pages/1_Utilization_Dashboard.py", title="Dashboard",      icon="📊"),
-            st.Page("pages/2_Utilization_Checkin.py",   title="Weekly Check-in", icon="📤"),
+        "ArkScore": [
+            st.Page("systems/arkscore/home.py",                    title="Overview",              icon="📋", url_path="arkscore"),
+            st.Page("systems/arkscore/utilization_dashboard.py",   title="Utilization Dashboard", icon="📊"),
+            st.Page("systems/arkscore/utilization_checkin.py",     title="Utilization Check-in",  icon="📤"),
+            st.Page("systems/arkscore/operational_health.py",      title="Operational Health",    icon="🟢"),
+            st.Page("systems/arkscore/weekly_checkin.py",          title="Weekly Check-in",       icon="✍️"),
+            st.Page("systems/arkscore/project_management.py",      title="Project Management",    icon="⚙️"),
         ],
-        "Operational Health": [
-            st.Page("pages/2_Operational_Health.py", title="Dashboard",          icon="📊"),
-            st.Page("pages/4_Weekly_Checkin.py",     title="Weekly Check-in",    icon="✍️"),
-            st.Page("pages/3_Project_Management.py", title="Project Management", icon="⚙️"),
+        "Company": [
+            st.Page("systems/people/employees.py", title="Employees", icon="👥"),
         ],
-        "Coming Soon": [
-            st.Page("pages/5_Client_Health.py",      title="Client Health",      icon="🔒"),
-            st.Page("pages/6_Process_Compliance.py", title="Process Compliance", icon="🔒"),
-            st.Page("pages/7_Revenue_per_Head.py",   title="Revenue per Head",   icon="🔒"),
-            st.Page("pages/8_BD_Conversations.py",   title="BD Conversations",   icon="🔒"),
-            st.Page("pages/9_Rock_Completion.py",    title="Rock Completion",    icon="🔒"),
-        ],
+        # Add new systems here as new sections, e.g.:
+        # "HR System": [
+        #     st.Page("systems/hr/home.py", title="Overview", icon="🏢"),
+        # ],
     }
 )
 

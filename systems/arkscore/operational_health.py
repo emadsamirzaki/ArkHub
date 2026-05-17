@@ -1,27 +1,21 @@
 """
-pages/2_Operational_Health.py
+systems/arkscore/operational_health.py
 Dashboard view — read-only L10 display for Operational Health.
 """
 
 from __future__ import annotations
 
 import html as _html
-import os
-import sys
 
 import pandas as pd
 import streamlit as st
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from systems.arkscore.utils.entry_store import get_all_weeks, get_entries_for_week
+from systems.arkscore.utils.project_store import get_active_projects
 
-from utils.entry_store import get_all_weeks, get_entries_for_week
-from utils.project_store import get_active_projects
-
-# ── Constants ─────────────────────────────────────────────────────────────────
 ON_TRACK_THRESHOLD = 85.0
 NOTE_ICONS = {"Note": "📝", "Red Flag": "🚩", "Success Story": "🏆"}
 
-# ── CSS ───────────────────────────────────────────────────────────────────────
 CSS = """
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -63,8 +57,6 @@ html,body,[class*="css"]{font-family:'Inter',sans-serif!important}
 """
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 def _color(score: float) -> str:
     return "#22C55E" if score >= ON_TRACK_THRESHOLD else "#EF4444"
 
@@ -73,7 +65,6 @@ def _render_hero(score: float, on_count: int, total: int) -> None:
     color = _color(score)
     icon  = "🟢" if score >= ON_TRACK_THRESHOLD else "🔴"
     label = "On Track" if score >= ON_TRACK_THRESHOLD else "Needs Attention"
-
     st.markdown(
         f"""
 <div class="oh-hero">
@@ -132,8 +123,6 @@ def _project_card(project: dict, entry: dict | None) -> None:
     )
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
-
 def main() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     st.markdown("# 📊 Operational Health")
@@ -152,12 +141,10 @@ def main() -> None:
             st.warning("You also have no active projects. Add them in **Project Management**.")
         return
 
-    # ── Week selector ─────────────────────────────────────────────────────────
     col_sel, _ = st.columns([2, 5])
     with col_sel:
         week_label = st.selectbox("Select Week", all_weeks, index=0)
 
-    # ── Build lookups ─────────────────────────────────────────────────────────
     entries_this_week = get_entries_for_week(week_label)
     entry_by_project  = {e["project_id"]: e for e in entries_this_week}
 
@@ -169,7 +156,6 @@ def main() -> None:
     total_checked = len(projects_with_entries)
     score = (on_track_count / total_checked * 100) if total_checked else 0.0
 
-    # ── Hero ──────────────────────────────────────────────────────────────────
     if total_checked == 0:
         st.warning(f"No check-ins found for **{week_label}**.")
     else:
@@ -179,14 +165,12 @@ def main() -> None:
         st.warning("No active projects. Add them in **Project Management**.")
         return
 
-    # ── Project grid ──────────────────────────────────────────────────────────
     st.markdown('<p class="oh-section">Project Status</p>', unsafe_allow_html=True)
     cols = st.columns(3)
     for i, project in enumerate(projects):
         with cols[i % 3]:
             _project_card(project, entry_by_project.get(project["id"]))
 
-    # ── Summary table ─────────────────────────────────────────────────────────
     st.markdown('<p class="oh-section">Summary</p>', unsafe_allow_html=True)
 
     rows = []
@@ -196,19 +180,16 @@ def main() -> None:
         if e and e.get("note_text"):
             t = e["note_text"]
             note_preview = t[:80] + ("…" if len(t) > 80 else "")
-        rows.append(
-            {
-                "Project":      p["name"],
-                "PM":           p["pm"],
-                "Status":       e["health_status"] if e else "⏳ Awaiting",
-                "Note Type":    e.get("note_type") or "—" if e else "—",
-                "Note Preview": note_preview or "—",
-            }
-        )
+        rows.append({
+            "Project":      p["name"],
+            "PM":           p["pm"],
+            "Status":       e["health_status"] if e else "⏳ Awaiting",
+            "Note Type":    e.get("note_type") or "—" if e else "—",
+            "Note Preview": note_preview or "—",
+        })
 
     order = {"Off Track": 0, "On Track": 1, "⏳ Awaiting": 2}
     rows.sort(key=lambda r: (order.get(r["Status"], 3), r["Project"].lower()))
-
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
 

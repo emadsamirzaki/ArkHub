@@ -1,25 +1,19 @@
 """
-pages/2_Utilization_Checkin.py
---------------------------------
+systems/arkscore/utilization_checkin.py
 Utilization % Weekly Check-in — upload a Clockify CSV to save a week's data.
-Also shows the history of saved weeks with View / Delete actions.
 """
 
 from __future__ import annotations
 
-import os
-import sys
-from datetime import datetime
+from datetime import date, datetime
 
 import pandas as pd
 import streamlit as st
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from utils.constants import REQUIRED_COLUMNS
-from utils.entry_store import current_week_label, week_bounds, week_label_from_date
-from utils.parse_clockify import calculate_utilization, parse_clockify_csv
-from utils.utilization_store import (
+from systems.arkscore.utils.constants import REQUIRED_COLUMNS
+from systems.arkscore.utils.entry_store import week_bounds, week_label_from_date
+from systems.arkscore.utils.parse_clockify import calculate_utilization, parse_clockify_csv
+from systems.arkscore.utils.utilization_store import (
     delete_report,
     get_all_reports,
     report_exists,
@@ -38,10 +32,6 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     border-bottom: 1px solid #334155;
     text-transform: uppercase; letter-spacing: 0.1em;
 }
-.saved-row {
-    background: #1E293B; border: 1px solid #334155;
-    border-radius: 10px; padding: 14px 18px; margin-bottom: 10px;
-}
 </style>
 """,
     unsafe_allow_html=True,
@@ -55,8 +45,6 @@ def main() -> None:
     st.markdown("Upload a Clockify **Detailed Report** to save this week's utilization data.")
     st.markdown("---")
 
-    # ── Week date picker ──────────────────────────────────────────────────────
-    from datetime import date
     st.markdown('<p class="section-heading">Upload Report</p>', unsafe_allow_html=True)
 
     col_wk, col_lbl, _ = st.columns([2, 4, 2])
@@ -75,8 +63,6 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    auto_week = current_week_label()
-
     uploaded = st.file_uploader(
         "Clockify Detailed Report (.csv)",
         type=["csv"],
@@ -84,7 +70,6 @@ def main() -> None:
     )
 
     if uploaded is not None:
-        # ── Parse & validate ──────────────────────────────────────────────────
         try:
             df = parse_clockify_csv(uploaded)
         except ValueError as exc:
@@ -94,7 +79,6 @@ def main() -> None:
             st.error(f"❌ Failed to read file: {exc}")
             return
 
-        # Preview
         util_preview = calculate_utilization(df)
         total_hrs    = float(df["Duration (decimal)"].sum())
         n_members    = len(util_preview)
@@ -104,7 +88,6 @@ def main() -> None:
         col_b.metric("Total Hours", f"{total_hrs:.1f} h")
         col_c.metric("Avg Utilization", f"{util_preview['Utilization %'].mean():.1f}%")
 
-        # ── Duplicate warning ──────────────────────────────────────────────────
         already_saved = report_exists(week_label)
         if already_saved:
             st.warning(
@@ -112,8 +95,8 @@ def main() -> None:
                 "Uploading will **replace** the saved data."
             )
             col_ok, col_cancel, _ = st.columns([1, 1, 4])
-            confirm  = col_ok.button("✅ Confirm & Replace", type="primary")
-            cancel   = col_cancel.button("✖ Cancel")
+            confirm = col_ok.button("✅ Confirm & Replace", type="primary")
+            cancel  = col_cancel.button("✖ Cancel")
             if cancel:
                 st.info("Upload cancelled.")
                 return
@@ -123,30 +106,22 @@ def main() -> None:
             if not st.button("💾 Save Report", type="primary"):
                 return
 
-        # ── Save ──────────────────────────────────────────────────────────────
-        # sunday/thursday come directly from the date picker above.
         w_start = sunday.isoformat()
         w_end   = thursday.isoformat()
 
-        # Drop any temporary helper columns and convert Timestamps to strings
-        # so the data is JSON-serialisable.
         df = df.drop(columns=[c for c in df.columns if c.startswith("_")], errors="ignore")
         for col in df.select_dtypes(include=["datetime64[ns]", "datetime64[ns, UTC]", "datetimetz"]).columns:
             df[col] = df[col].astype(str)
-        # Also handle object columns that may contain Timestamp instances
         for col in df.select_dtypes(include="object").columns:
             df[col] = df[col].apply(lambda v: str(v) if hasattr(v, "isoformat") else v)
         raw_rows = df.to_dict(orient="records")
         upsert_report(week_label, w_start, w_end, raw_rows)
 
         st.success(f"✅ Report saved for **{week_label}**.")
-
-        # Auto-navigate to dashboard for this week
         st.session_state["util_selected_week"] = week_label
-        st.rerun()
+        st.switch_page("systems/arkscore/utilization_dashboard.py")
 
     else:
-        # Show expected format hint
         st.markdown("---")
         st.markdown("**Expected CSV format — key columns:**")
         sample = pd.DataFrame({
@@ -172,7 +147,6 @@ def main() -> None:
         st.info("No reports saved yet.")
         return
 
-    # Headers
     h1, h2, h3, h4, h5, h6 = st.columns([3, 2, 1, 1, 1, 1])
     h1.markdown("**Week**")
     h2.markdown("**Uploaded**")
@@ -190,14 +164,13 @@ def main() -> None:
         except Exception:
             up_at_fmt = up_at
 
-        raw_df  = pd.DataFrame(rep.get("raw_rows", []))
+        raw_df = pd.DataFrame(rep.get("raw_rows", []))
         if not raw_df.empty and "Duration (decimal)" in raw_df.columns:
             raw_df["Duration (decimal)"] = pd.to_numeric(
                 raw_df["Duration (decimal)"], errors="coerce"
             ).fillna(0.0)
             n_members = raw_df["User"].nunique() if "User" in raw_df.columns else "—"
-            total_h   = raw_df["Duration (decimal)"].sum()
-            total_h_s = f"{total_h:.1f} h"
+            total_h_s = f"{raw_df['Duration (decimal)'].sum():.1f} h"
         else:
             n_members = "—"
             total_h_s = "—"
@@ -209,7 +182,7 @@ def main() -> None:
         c4.markdown(total_h_s)
         if c5.button("View", key=f"view_{label}", use_container_width=True):
             st.session_state["util_selected_week"] = label
-            st.switch_page("pages/1_Utilization_Dashboard.py")
+            st.switch_page("systems/arkscore/utilization_dashboard.py")
         if c6.button("Delete", key=f"del_{label}", use_container_width=True):
             st.session_state[f"confirm_delete_{label}"] = True
 
