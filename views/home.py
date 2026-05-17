@@ -141,6 +141,13 @@ SYSTEMS = [
         "url":    "/arkscore",
     },
     {
+        "icon":   "📍",
+        "name":   "Workforce",
+        "desc":   "Working patterns, live team availability, and daily schedules.",
+        "active": True,
+        "url":    "/availability",
+    },
+    {
         "icon":   "👥",
         "name":   "HR System",
         "desc":   "Leave management, performance reviews, and employee records.",

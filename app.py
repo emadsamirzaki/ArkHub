@@ -25,7 +25,11 @@ pg = st.navigation(
             st.Page("systems/arkscore/project_management.py",      title="Project Management",    icon="⚙️"),
         ],
         "Company": [
-            st.Page("systems/people/employees.py", title="Employees", icon="👥"),
+            st.Page("systems/people/employees.py",        title="Employees",        icon="👥"),
+        ],
+        "Workforce": [
+            st.Page("systems/people/working_patterns.py", title="Working Patterns", icon="🗓️"),
+            st.Page("systems/people/availability.py",     title="Availability Now", icon="📍", url_path="availability"),
         ],
         # Add new systems here as new sections, e.g.:
         # "HR System": [
