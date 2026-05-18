@@ -323,11 +323,14 @@ def _section_next_hour(employees: list[dict], day: str, now: datetime) -> None:
                 verb = "Switching to"
             changes.append((at_time, emp["name"], verb, new_status))
 
-    if not changes:
-        return
-
     changes.sort()
     st.markdown('<p class="section-heading">Changes in the Next Hour</p>', unsafe_allow_html=True)
+    if not changes:
+        st.markdown(
+            '<div class="next-row" style="color:#64748B;">No changes expected in the next hour.</div>',
+            unsafe_allow_html=True,
+        )
+        return
     for at_time, name, verb, new_status in changes:
         meta = STATUS_META[new_status]
         st.markdown(
@@ -388,6 +391,13 @@ def main() -> None:
         label_visibility="collapsed",
     )
     filtered = [e for e in employees if e["name"] in selected] if selected else employees
+
+    # Sort: active statuses (home/office) first, then away, then off; alphabetical within group
+    _STATUS_ORDER = {"home": 0, "office": 0, "away": 1, "off": 2}
+    filtered = sorted(
+        filtered,
+        key=lambda e: (_STATUS_ORDER.get(get_status_now(e["id"], day, time_str), 2), e["name"]),
+    )
 
     if not is_workday:
         st.warning(
