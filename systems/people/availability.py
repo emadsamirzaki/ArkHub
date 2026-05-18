@@ -396,15 +396,14 @@ def main() -> None:
         _section_employee_details(filtered)
         return
 
-    # Right Now first, then calendar
     _section_now(filtered, day, time_str)
+
+    st.markdown("")
+    _section_next_hour(filtered, day, now)
 
     st.markdown("")
     st.markdown('<p class="section-heading">Day Calendar</p>', unsafe_allow_html=True)
     _section_calendar_day(filtered, day, now)
-
-    st.markdown("")
-    _section_next_hour(filtered, day, now)
 
     st.markdown("")
     _section_employee_details(filtered)
