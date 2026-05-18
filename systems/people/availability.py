@@ -272,19 +272,15 @@ def _section_now(employees: list[dict], day: str, time_str: str) -> None:
         else:
             label = meta["label"].replace('"', '\\"')
         card_data.append((emp, cid))
-        # Three selector variants cover every known Streamlit DOM structure
-        sel  = (f':has(.now-m-{cid}) + * button,'
-                f'.element-container:has(.now-m-{cid}) + .element-container button,'
-                f'[data-testid="element-container"]:has(.now-m-{cid})'
-                f' + [data-testid="element-container"] button')
-        selp = (f':has(.now-m-{cid}) + * button p::after,'
-                f'.element-container:has(.now-m-{cid}) + .element-container button p::after,'
-                f'[data-testid="element-container"]:has(.now-m-{cid})'
-                f' + [data-testid="element-container"] button p::after')
-        sela = (f':has(.now-m-{cid}) + * button::after,'
-                f'.element-container:has(.now-m-{cid}) + .element-container button::after,'
-                f'[data-testid="element-container"]:has(.now-m-{cid})'
-                f' + [data-testid="element-container"] button::after')
+        # Selectors scoped to column containers — this prevents the styles from
+        # leaking into the dialog's close button, which is NOT inside a column.
+        # Two column data-testid variants cover different Streamlit versions.
+        sel  = (f'[data-testid="stColumn"] :has(.now-m-{cid}) + * button,'
+                f'[data-testid="column"] :has(.now-m-{cid}) + * button')
+        selp = (f'[data-testid="stColumn"] :has(.now-m-{cid}) + * button p::after,'
+                f'[data-testid="column"] :has(.now-m-{cid}) + * button p::after')
+        sela = (f'[data-testid="stColumn"] :has(.now-m-{cid}) + * button::after,'
+                f'[data-testid="column"] :has(.now-m-{cid}) + * button::after')
         css += (
             f'{sel}{{background:{bg}!important;border:1px solid #334155!important;'
             f'border-radius:12px!important;min-height:96px!important;'
