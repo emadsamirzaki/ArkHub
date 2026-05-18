@@ -257,54 +257,31 @@ def _section_now(employees: list[dict], day: str, time_str: str) -> None:
     for i, emp in enumerate(employees):
         status = get_status_now(emp["id"], day, time_str)
         meta   = STATUS_META[status]
-        cid    = emp["id"]
         bg     = meta["bg"]
         fg     = meta["color"]
-        # Escape quotes so they're safe inside CSS string values
-        role   = emp["role"].replace('"', '\\"')
-        # For off-status employees, show when they next start instead of generic label
+        cid    = emp["id"]
+
         if status == "off":
             nxt = get_next_transition(emp["id"], day, time_str)
-            label = (f"Starting at {to_12h(nxt[0])}" if nxt else meta["label"]).replace('"', '\\"')
+            status_label = f"Starting at {to_12h(nxt[0])}" if nxt else meta["label"]
         else:
-            label = meta["label"].replace('"', '\\"')
+            status_label = meta["label"]
+
+        name_s = emp["name"].replace("<", "&lt;").replace(">", "&gt;")
+        role_s = emp["role"].replace("<", "&lt;").replace(">", "&gt;")
+
         with cols[i % 4]:
+            # Inline styles guarantee the correct background regardless of Streamlit DOM structure
             st.markdown(
-                f'<div class="now-m-{cid}"></div>'
-                f'<style>'
-                # Button container
-                f'[data-testid="element-container"]:has(.now-m-{cid})'
-                f' + [data-testid="element-container"]'
-                f'{{position:relative;z-index:2;}}'
-                # Button = full card: coloured background, border, rounded corners
-                f'[data-testid="element-container"]:has(.now-m-{cid})'
-                f' + [data-testid="element-container"] button'
-                f'{{background:{bg}!important;border:1px solid #334155!important;'
-                f'border-radius:12px!important;min-height:96px!important;'
-                f'width:100%!important;text-align:left!important;'
-                f'padding:16px 20px 16px!important;color:#F1F5F9!important;'
-                f'font-weight:700!important;font-size:1rem!important;'
-                f'box-shadow:none!important;cursor:pointer!important;'
-                f'display:flex!important;flex-direction:column!important;'
-                f'align-items:flex-start!important;}}'
-                # Role — injected after the name <p> inside the button
-                f'[data-testid="element-container"]:has(.now-m-{cid})'
-                f' + [data-testid="element-container"] button p::after'
-                f'{{content:"{role}";display:block;'
-                f'font-size:0.8rem;font-weight:400;color:#94A3B8;margin-top:4px;}}'
-                # Status — injected as button ::after flex item
-                f'[data-testid="element-container"]:has(.now-m-{cid})'
-                f' + [data-testid="element-container"] button::after'
-                f'{{content:"{label}";display:block;'
-                f'font-size:0.85rem;font-weight:600;color:{fg};margin-top:10px;}}'
-                # Hover
-                f'[data-testid="element-container"]:has(.now-m-{cid})'
-                f' + [data-testid="element-container"] button:hover'
-                f'{{opacity:0.85!important;border-color:#60A5FA!important;}}'
-                f'</style>',
+                f'<div style="background:{bg};border:1px solid #334155;border-radius:12px;'
+                f'min-height:96px;padding:16px 20px;margin-bottom:4px;">'
+                f'<div style="font-weight:700;font-size:1rem;color:#F1F5F9;">{name_s}</div>'
+                f'<div style="font-size:0.8rem;color:#94A3B8;margin-top:4px;">{role_s}</div>'
+                f'<div style="font-size:0.85rem;font-weight:600;color:{fg};margin-top:10px;">{status_label}</div>'
+                f'</div>',
                 unsafe_allow_html=True,
             )
-            if st.button(emp["name"], key=f"now_btn_{cid}", use_container_width=True):
+            if st.button("📋 Pattern", key=f"now_btn_{cid}", use_container_width=True):
                 _pattern_dialog(emp)
 
 
