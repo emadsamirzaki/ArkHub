@@ -72,10 +72,51 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     border-bottom: 1px solid #334155;
     text-transform: uppercase; letter-spacing: 0.1em;
 }
-.now-card { border-radius: 12px; padding: 16px 20px; margin-bottom: 10px; border: 1px solid #334155; }
-.now-card-name   { font-weight: 700; font-size: 1rem; color: #F1F5F9; }
-.now-card-role   { font-size: 0.8rem; color: #94A3B8; margin-top: 2px; }
-.now-card-status { font-size: 0.85rem; font-weight: 600; margin-top: 10px; }
+
+/* ── Now-cards ── */
+.now-card {
+    border-radius: 12px;
+    padding: 42px 20px 16px;
+    margin-bottom: 10px;
+    border: 1px solid #334155;
+}
+.now-card-role   { font-size: 0.8rem; color: #94A3B8; margin-bottom: 8px; }
+.now-card-status { font-size: 0.85rem; font-weight: 600; }
+
+/*
+ * Clickable-name trick:
+ *   The st.button (name) renders FIRST in the DOM.
+ *   The HTML card div renders SECOND.
+ *   CSS pulls the card UP (negative margin) so it sits behind the button,
+ *   and makes the button transparent so the card's colour shows through.
+ */
+div[data-testid="element-container"]:has(.now-card) {
+    margin-top: -40px;
+    position: relative;
+    z-index: 1;
+}
+div[data-testid="element-container"]:has(+ div[data-testid="element-container"]:has(.now-card)) {
+    position: relative;
+    z-index: 2;
+}
+div[data-testid="element-container"]:has(+ div[data-testid="element-container"]:has(.now-card)) button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: #F1F5F9 !important;
+    font-weight: 700 !important;
+    font-size: 1rem !important;
+    padding: 6px 20px 0 !important;
+    min-height: 0 !important;
+    text-align: left !important;
+    width: 100% !important;
+    cursor: pointer !important;
+}
+div[data-testid="element-container"]:has(+ div[data-testid="element-container"]:has(.now-card)) button:hover {
+    color: #93C5FD !important;
+    text-decoration: underline !important;
+}
+
 .next-row  { background:#1E293B; border-radius:8px; padding:10px 14px; margin-bottom:6px; font-size:0.88rem; color:#CBD5E1; }
 .next-time { color:#60A5FA; font-weight:700; }
 </style>
@@ -98,6 +139,21 @@ def _weekday_name(dt: datetime) -> str:
 def _to_min(t: str) -> int:
     h, m = map(int, t.split(":"))
     return h * 60 + m
+
+
+# ── Working-pattern dialog ────────────────────────────────────────────────────
+
+@st.dialog("Working Pattern")
+def _pattern_dialog(emp: dict) -> None:
+    pat = get_pattern(emp["id"])
+    st.markdown(f"**{emp['name']}** — {emp['role']}")
+    st.divider()
+    if not pat:
+        st.info("No working pattern set yet.")
+        return
+    for d in DAYS:
+        slots = pat["patterns"].get(d, [])
+        st.markdown(f"**{DAY_LABELS[d]}:** {format_slots(slots) if slots else '*Off*'}")
 
 
 # ── Google Calendar-style day view ────────────────────────────────────────────
@@ -240,9 +296,12 @@ def _section_now(employees: list[dict], day: str, time_str: str) -> None:
         status = get_status_now(emp["id"], day, time_str)
         meta   = STATUS_META[status]
         with cols[i % 4]:
+            # Button first (transparent, floats above card via CSS z-index)
+            if st.button(emp["name"], key=f"now_name_{emp['id']}"):
+                _pattern_dialog(emp)
+            # Card second (slides up behind the button via CSS negative margin)
             st.markdown(
                 f'<div class="now-card" style="background:{meta["bg"]};">'
-                f'<div class="now-card-name">{emp["name"]}</div>'
                 f'<div class="now-card-role">{emp["role"]}</div>'
                 f'<div class="now-card-status" style="color:{meta["color"]};">'
                 f'{meta["label"]}</div>'
@@ -327,24 +386,35 @@ def main() -> None:
         st.info("No active employees. Add employees via the Employees page.")
         return
 
+    # ── Name filter ───────────────────────────────────────────────────────────
+    all_names = sorted(e["name"] for e in employees)
+    selected  = st.multiselect(
+        "Filter employees",
+        options=all_names,
+        placeholder="All employees — select to filter",
+        label_visibility="collapsed",
+    )
+    filtered = [e for e in employees if e["name"] in selected] if selected else employees
+
     if not is_workday:
         st.warning(
             f"Today is {day_display} — outside the work week (Sun–Thu). Showing schedules below."
         )
-        _section_employee_details(employees)
+        _section_employee_details(filtered)
         return
 
+    # Right Now first, then calendar
+    _section_now(filtered, day, time_str)
+
+    st.markdown("")
     st.markdown('<p class="section-heading">Day Calendar</p>', unsafe_allow_html=True)
-    _section_calendar_day(employees, day, now)
+    _section_calendar_day(filtered, day, now)
 
     st.markdown("")
-    _section_now(employees, day, time_str)
+    _section_next_hour(filtered, day, now)
 
     st.markdown("")
-    _section_next_hour(employees, day, now)
-
-    st.markdown("")
-    _section_employee_details(employees)
+    _section_employee_details(filtered)
 
 
 main()
