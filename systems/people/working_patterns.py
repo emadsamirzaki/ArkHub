@@ -74,10 +74,10 @@ def _blank_slot() -> dict:
 
 def _time_options() -> list[str]:
     times = []
-    for h in range(7, 22):
+    for h in range(6, 23):
         for m in (0, 30):
             times.append(f"{h:02d}:{m:02d}")
-    times.append("22:00")
+    times.append("23:00")
     return times
 
 

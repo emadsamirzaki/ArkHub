@@ -49,8 +49,8 @@ STATUS_META = {
 }
 
 # Calendar display range
-CAL_START_H = 7
-CAL_END_H   = 22
+CAL_START_H = 6
+CAL_END_H   = 23
 
 HOUR_H  = 60    # px per hour
 GUTTER  = 56    # px — time-label column
@@ -253,6 +253,23 @@ def _section_calendar_day(employees: list[dict], day: str, now: datetime) -> Non
 
 def _section_now(employees: list[dict], day: str, time_str: str) -> None:
     st.markdown('<p class="section-heading">Right Now</p>', unsafe_allow_html=True)
+    st.markdown(
+        '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;">'
+        '<span style="font-size:0.75rem;color:#94A3B8;">'
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;'
+        'background:#14532D;margin-right:5px;vertical-align:middle;"></span>Working from Home</span>'
+        '<span style="font-size:0.75rem;color:#94A3B8;">'
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;'
+        'background:#1E3A5F;margin-right:5px;vertical-align:middle;"></span>In the Office</span>'
+        '<span style="font-size:0.75rem;color:#94A3B8;">'
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;'
+        'background:#78350F;margin-right:5px;vertical-align:middle;"></span>Away / Break</span>'
+        '<span style="font-size:0.75rem;color:#94A3B8;">'
+        '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;'
+        'background:#1E293B;border:1px solid #334155;margin-right:5px;vertical-align:middle;"></span>Not Working</span>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
     # Build one global <style> block covering all Streamlit DOM variants.
     # The broad `:has(.now-m-X) + * button` selector works regardless of what
