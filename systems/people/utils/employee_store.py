@@ -40,12 +40,13 @@ def get_active_employees() -> list[dict]:
     return [e for e in load_employees() if e.get("status") == "Active"]
 
 
-def add_employee(name: str, email: str, role: str) -> dict:
+def add_employee(name: str, email: str, role: str, mobile: str = "") -> dict:
     employees = load_employees()
     emp: dict = {
         "id":         str(uuid.uuid4()),
         "name":       name.strip(),
         "email":      email.strip().lower(),
+        "mobile":     mobile.strip(),
         "role":       role.strip(),
         "status":     "Active",
         "created_at": date.today().isoformat(),
