@@ -5,31 +5,22 @@ Load / save weekly check-in entries.
 
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-DATA_DIR   = Path(__file__).parent.parent / "data"
-ENTRY_FILE = DATA_DIR / "entries.json"
+from systems.utils.github_store import read_json, write_json
 
-
-def _ensure() -> None:
-    DATA_DIR.mkdir(exist_ok=True)
-    if not ENTRY_FILE.exists():
-        ENTRY_FILE.write_text("[]", encoding="utf-8")
+_REPO_PATH  = "systems/arkscore/data/entries.json"
+_LOCAL_PATH = Path(__file__).parent.parent / "data" / "entries.json"
 
 
 def load_entries() -> list[dict]:
-    _ensure()
-    return json.loads(ENTRY_FILE.read_text(encoding="utf-8"))
+    return read_json(_REPO_PATH, _LOCAL_PATH, [])
 
 
 def save_entries(entries: list[dict]) -> None:
-    _ensure()
-    ENTRY_FILE.write_text(
-        json.dumps(entries, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    write_json(_REPO_PATH, _LOCAL_PATH, entries, "Update check-in entries")
 
 
 def get_entry(project_id: str, week_label: str) -> dict | None:

@@ -5,31 +5,22 @@ Load / save project data.
 
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import date
 from pathlib import Path
 
-DATA_DIR  = Path(__file__).parent.parent / "data"
-PROJ_FILE = DATA_DIR / "projects.json"
+from systems.utils.github_store import read_json, write_json
 
-
-def _ensure() -> None:
-    DATA_DIR.mkdir(exist_ok=True)
-    if not PROJ_FILE.exists():
-        PROJ_FILE.write_text("[]", encoding="utf-8")
+_REPO_PATH  = "systems/arkscore/data/projects.json"
+_LOCAL_PATH = Path(__file__).parent.parent / "data" / "projects.json"
 
 
 def load_projects() -> list[dict]:
-    _ensure()
-    return json.loads(PROJ_FILE.read_text(encoding="utf-8"))
+    return read_json(_REPO_PATH, _LOCAL_PATH, [])
 
 
 def save_projects(projects: list[dict]) -> None:
-    _ensure()
-    PROJ_FILE.write_text(
-        json.dumps(projects, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    write_json(_REPO_PATH, _LOCAL_PATH, projects, "Update projects")
 
 
 def get_active_projects() -> list[dict]:

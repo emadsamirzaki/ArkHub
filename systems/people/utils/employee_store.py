@@ -5,31 +5,22 @@ Central employee store — used by all ArkPanel systems that need a people refer
 
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import date
 from pathlib import Path
 
-DATA_DIR = Path(__file__).parent.parent / "data"
-EMP_FILE = DATA_DIR / "employees.json"
+from systems.utils.github_store import read_json, write_json
 
-
-def _ensure() -> None:
-    DATA_DIR.mkdir(exist_ok=True)
-    if not EMP_FILE.exists():
-        EMP_FILE.write_text("[]", encoding="utf-8")
+_REPO_PATH  = "systems/people/data/employees.json"
+_LOCAL_PATH = Path(__file__).parent.parent / "data" / "employees.json"
 
 
 def load_employees() -> list[dict]:
-    _ensure()
-    return json.loads(EMP_FILE.read_text(encoding="utf-8"))
+    return read_json(_REPO_PATH, _LOCAL_PATH, [])
 
 
 def save_employees(employees: list[dict]) -> None:
-    _ensure()
-    EMP_FILE.write_text(
-        json.dumps(employees, indent=2, ensure_ascii=False), encoding="utf-8"
-    )
+    write_json(_REPO_PATH, _LOCAL_PATH, employees, "Update employees")
 
 
 def get_all_roles() -> list[str]:

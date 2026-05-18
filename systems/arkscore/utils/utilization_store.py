@@ -6,10 +6,14 @@ Structure: { week_label: { id, week_label, week_start, week_end, uploaded_at, ra
 
 from __future__ import annotations
 
-import json
 import uuid
 from datetime import datetime
 from pathlib import Path
+
+from systems.utils.github_store import read_json, write_json
+
+_REPO_PATH  = "systems/arkscore/data/utilization_reports.json"
+_LOCAL_PATH = Path(__file__).parent.parent / "data" / "utilization_reports.json"
 
 
 def _default(obj):
@@ -20,26 +24,12 @@ def _default(obj):
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
 
-DATA_DIR  = Path(__file__).parent.parent / "data"
-UTIL_FILE = DATA_DIR / "utilization_reports.json"
-
-
-def _ensure() -> None:
-    DATA_DIR.mkdir(exist_ok=True)
-    if not UTIL_FILE.exists():
-        UTIL_FILE.write_text("{}", encoding="utf-8")
-
-
 def _load() -> dict:
-    _ensure()
-    return json.loads(UTIL_FILE.read_text(encoding="utf-8"))
+    return read_json(_REPO_PATH, _LOCAL_PATH, {})
 
 
 def _save(data: dict) -> None:
-    _ensure()
-    UTIL_FILE.write_text(
-        json.dumps(data, indent=2, ensure_ascii=False, default=_default), encoding="utf-8"
-    )
+    write_json(_REPO_PATH, _LOCAL_PATH, data, "Update utilization reports", json_default=_default)
 
 
 def get_all_reports() -> list[dict]:

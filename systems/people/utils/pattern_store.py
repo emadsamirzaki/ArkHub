@@ -5,30 +5,23 @@ Working-pattern store — weekly schedules for each employee.
 
 from __future__ import annotations
 
-import json
 from datetime import datetime
 from pathlib import Path
 
-DATA_DIR = Path(__file__).parent.parent / "data"
-PAT_FILE = DATA_DIR / "working_patterns.json"
+from systems.utils.github_store import read_json, write_json
+
+_REPO_PATH  = "systems/people/data/working_patterns.json"
+_LOCAL_PATH = Path(__file__).parent.parent / "data" / "working_patterns.json"
 
 DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday"]
 
 
-def _ensure() -> None:
-    DATA_DIR.mkdir(exist_ok=True)
-    if not PAT_FILE.exists():
-        PAT_FILE.write_text("{}", encoding="utf-8")
-
-
 def load_patterns() -> dict:
-    _ensure()
-    return json.loads(PAT_FILE.read_text(encoding="utf-8"))
+    return read_json(_REPO_PATH, _LOCAL_PATH, {})
 
 
 def save_patterns(data: dict) -> None:
-    _ensure()
-    PAT_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    write_json(_REPO_PATH, _LOCAL_PATH, data, "Update working patterns")
 
 
 def get_pattern(emp_id: str) -> dict | None:
