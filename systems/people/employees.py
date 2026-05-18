@@ -168,7 +168,7 @@ def main() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
     st.markdown("# 👥 Employees")
     st.markdown(
-        "Central employee directory — names, emails, and roles used across all ArkHub systems."
+        "Central employee directory — names, emails, and roles used across all ArkPanel systems."
     )
     st.markdown("---")
     _add_form()

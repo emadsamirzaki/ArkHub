@@ -1,5 +1,5 @@
 """
-views/home.py — ArkHub platform homepage
+views/home.py — ArkPanel platform homepage
 """
 
 import streamlit as st
@@ -121,7 +121,7 @@ st.markdown(
        style="height: 56px; width: auto; opacity: 0.85;" alt="ArkDev Logo" />
 </div>
 <div class="platform-hero">
-  <div class="platform-title">ArkHub</div>
+  <div class="platform-title">ArkPanel</div>
   <div class="platform-sub">All company tools — for employees, HR, and leadership</div>
 </div>
 """,

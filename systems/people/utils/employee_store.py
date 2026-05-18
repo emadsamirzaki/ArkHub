@@ -1,6 +1,6 @@
 """
 systems/people/utils/employee_store.py
-Central employee store — used by all ArkHub systems that need a people reference.
+Central employee store — used by all ArkPanel systems that need a people reference.
 """
 
 from __future__ import annotations

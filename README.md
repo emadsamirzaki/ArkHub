@@ -1,7 +1,7 @@
-# ArkHub — Internal Systems Platform
+# ArkPanel — Internal Systems Platform
 
 > An EOS-aligned internal tools platform for Arkdev leadership, built with
-> Python + Streamlit. ArkScore is the L10 meeting scorecard system within ArkHub.
+> Python + Streamlit. ArkScore is the L10 meeting scorecard system within ArkPanel.
 
 ---
 
@@ -15,7 +15,7 @@
 
 ```bash
 # 1. Clone / open the project folder
-cd "ArkHub"
+cd "ArkPanel"
 
 # 2. Create and activate a virtual environment (recommended)
 python -m venv .venv
@@ -37,7 +37,7 @@ The app opens at **http://localhost:8501** in your browser.
 
 ## Platform Overview
 
-ArkHub is a multi-system internal platform. Each system is independently navigable from the home page or the sidebar.
+ArkPanel is a multi-system internal platform. Each system is independently navigable from the home page or the sidebar.
 
 | System | Status | Description |
 |--------|--------|-------------|
@@ -143,7 +143,7 @@ The Utilization module expects Clockify's **Detailed Report** export. Key column
 The Workforce system manages employee working patterns and shows live team availability.
 
 ### Employees (`Company → Employees`)
-- Central employee directory used by all ArkHub systems
+- Central employee directory used by all ArkPanel systems
 - Add employees with full name, email, and role
 - Role picker supports existing roles or creating a new role on the fly
 - Edit any employee inline; toggle status between Active and Inactive
@@ -169,8 +169,8 @@ The Workforce system manages employee working patterns and shows live team avail
 ## Project Structure
 
 ```
-ArkHub/
-├── app.py                              # ArkHub navigation controller
+ArkPanel/
+├── app.py                              # ArkPanel navigation controller
 ├── requirements.txt
 ├── .streamlit/
 │   └── config.toml                     # Dark-navy theme

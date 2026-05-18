@@ -1,11 +1,11 @@
 """
-app.py — ArkHub navigation controller
+app.py — ArkPanel navigation controller
 """
 
 import streamlit as st
 
 st.set_page_config(
-    page_title="ArkHub",
+    page_title="ArkPanel",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="expanded",

@@ -21,7 +21,7 @@ The app runs at **http://localhost:8501**. There are no tests, no linter config,
 
 ## Architecture
 
-ArkHub is a **multi-system Streamlit app** with a single entry point (`app.py`) that owns navigation for all pages.
+ArkPanel is a **multi-system Streamlit app** with a single entry point (`app.py`) that owns navigation for all pages.
 
 ### Navigation pattern
 
