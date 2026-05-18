@@ -76,46 +76,21 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 /* ── Now-cards ── */
 .now-card {
     border-radius: 12px;
-    padding: 42px 20px 16px;
+    padding: 16px 20px;
     margin-bottom: 10px;
     border: 1px solid #334155;
+    transition: border-color 0.15s;
 }
-.now-card-role   { font-size: 0.8rem; color: #94A3B8; margin-bottom: 8px; }
-.now-card-status { font-size: 0.85rem; font-weight: 600; }
-
+.now-card-name   { font-weight: 700; color: #F1F5F9; font-size: 1rem; }
+.now-card-role   { font-size: 0.8rem; color: #94A3B8; margin-top: 2px; }
+.now-card-status { font-size: 0.85rem; font-weight: 600; margin-top: 10px; }
 /*
- * Clickable-name trick:
- *   The st.button (name) renders FIRST in the DOM.
- *   The HTML card div renders SECOND.
- *   CSS pulls the card UP (negative margin) so it sits behind the button,
- *   and makes the button transparent so the card's colour shows through.
+ * Per-card overlay technique (injected inline per employee):
+ *   A unique marker class anchors CSS selectors for each card.
+ *   The st.button renders FIRST (transparent, full card height, z-index 2).
+ *   The HTML card renders SECOND (visual, pulled up via negative margin, z-index 1).
+ *   Clicking anywhere on the card area hits the invisible button above it.
  */
-div[data-testid="element-container"]:has(.now-card) {
-    margin-top: -40px;
-    position: relative;
-    z-index: 1;
-}
-div[data-testid="element-container"]:has(+ div[data-testid="element-container"]:has(.now-card)) {
-    position: relative;
-    z-index: 2;
-}
-div[data-testid="element-container"]:has(+ div[data-testid="element-container"]:has(.now-card)) button {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: #F1F5F9 !important;
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    padding: 6px 20px 0 !important;
-    min-height: 0 !important;
-    text-align: left !important;
-    width: 100% !important;
-    cursor: pointer !important;
-}
-div[data-testid="element-container"]:has(+ div[data-testid="element-container"]:has(.now-card)) button:hover {
-    color: #93C5FD !important;
-    text-decoration: underline !important;
-}
 
 .next-row  { background:#1E293B; border-radius:8px; padding:10px 14px; margin-bottom:6px; font-size:0.88rem; color:#CBD5E1; }
 .next-time { color:#60A5FA; font-weight:700; }
@@ -295,13 +270,43 @@ def _section_now(employees: list[dict], day: str, time_str: str) -> None:
     for i, emp in enumerate(employees):
         status = get_status_now(emp["id"], day, time_str)
         meta   = STATUS_META[status]
+        cid    = emp["id"]
         with cols[i % 4]:
-            # Button first (transparent, floats above card via CSS z-index)
-            if st.button(emp["name"], key=f"now_name_{emp['id']}"):
+            # Unique marker + per-card CSS injected together in one element-container.
+            # Selectors use the marker class to target the button (next sibling)
+            # and the card (sibling after that) without relying on Streamlit internals.
+            st.markdown(
+                f'<div class="now-m-{cid}"></div>'
+                f'<style>'
+                # Button element-container: sits on top (z-index 2)
+                f'[data-testid="element-container"]:has(.now-m-{cid})'
+                f' + [data-testid="element-container"]'
+                f'{{position:relative;z-index:2;}}'
+                # Button itself: transparent, full card height, pointer cursor
+                f'[data-testid="element-container"]:has(.now-m-{cid})'
+                f' + [data-testid="element-container"] button'
+                f'{{background:transparent!important;border:none!important;'
+                f'box-shadow:none!important;color:transparent!important;'
+                f'min-height:96px!important;width:100%!important;'
+                f'cursor:pointer!important;padding:0!important;}}'
+                # Card element-container: behind button (z-index 1), pulled up
+                f'[data-testid="element-container"]:has(.now-m-{cid})'
+                f' + [data-testid="element-container"]'
+                f' + [data-testid="element-container"]'
+                f'{{position:relative;z-index:1;margin-top:-104px;}}'
+                # Hover: brighten card border when user hovers the invisible button
+                f'[data-testid="stVerticalBlock"]:has(.now-m-{cid}):has(button:hover) .now-card'
+                f'{{border-color:#60A5FA;}}'
+                f'</style>',
+                unsafe_allow_html=True,
+            )
+            # Invisible click overlay — triggers the pattern dialog
+            if st.button(emp["name"], key=f"now_btn_{cid}", use_container_width=True):
                 _pattern_dialog(emp)
-            # Card second (slides up behind the button via CSS negative margin)
+            # Original card design — name, role, status, coloured background
             st.markdown(
                 f'<div class="now-card" style="background:{meta["bg"]};">'
+                f'<div class="now-card-name">{emp["name"]}</div>'
                 f'<div class="now-card-role">{emp["role"]}</div>'
                 f'<div class="now-card-status" style="color:{meta["color"]};">'
                 f'{meta["label"]}</div>'
