@@ -25,5 +25,6 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Data / uploads (do not commit raw CSV exports)
+# Data / uploads — never commit runtime data files
 *.csv
+**/data/*.json
