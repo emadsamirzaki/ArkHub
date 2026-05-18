@@ -262,7 +262,12 @@ def _section_now(employees: list[dict], day: str, time_str: str) -> None:
         fg     = meta["color"]
         # Escape quotes so they're safe inside CSS string values
         role   = emp["role"].replace('"', '\\"')
-        label  = meta["label"].replace('"', '\\"')
+        # For off-status employees, show when they next start instead of generic label
+        if status == "off":
+            nxt = get_next_transition(emp["id"], day, time_str)
+            label = (f"Starting at {to_12h(nxt[0])}" if nxt else meta["label"]).replace('"', '\\"')
+        else:
+            label = meta["label"].replace('"', '\\"')
         with cols[i % 4]:
             st.markdown(
                 f'<div class="now-m-{cid}"></div>'
