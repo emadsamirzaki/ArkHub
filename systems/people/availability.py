@@ -253,35 +253,63 @@ def _section_calendar_day(employees: list[dict], day: str, now: datetime) -> Non
 
 def _section_now(employees: list[dict], day: str, time_str: str) -> None:
     st.markdown('<p class="section-heading">Right Now</p>', unsafe_allow_html=True)
-    cols = st.columns(4)
-    for i, emp in enumerate(employees):
+
+    # Build one global <style> block covering all Streamlit DOM variants.
+    # The broad `:has(.now-m-X) + * button` selector works regardless of what
+    # data-testid Streamlit uses for its wrapper elements in the deployed version.
+    css = "<style>"
+    card_data: list[tuple] = []
+    for emp in employees:
         status = get_status_now(emp["id"], day, time_str)
         meta   = STATUS_META[status]
+        cid    = emp["id"]
         bg     = meta["bg"]
         fg     = meta["color"]
-        cid    = emp["id"]
-
+        role   = emp["role"].replace('"', '\\"')
         if status == "off":
-            nxt = get_next_transition(emp["id"], day, time_str)
-            status_label = f"Starting at {to_12h(nxt[0])}" if nxt else meta["label"]
+            nxt   = get_next_transition(emp["id"], day, time_str)
+            label = (f"Starting at {to_12h(nxt[0])}" if nxt else meta["label"]).replace('"', '\\"')
         else:
-            status_label = meta["label"]
+            label = meta["label"].replace('"', '\\"')
+        card_data.append((emp, cid))
+        # Three selector variants cover every known Streamlit DOM structure
+        sel  = (f':has(.now-m-{cid}) + * button,'
+                f'.element-container:has(.now-m-{cid}) + .element-container button,'
+                f'[data-testid="element-container"]:has(.now-m-{cid})'
+                f' + [data-testid="element-container"] button')
+        selp = (f':has(.now-m-{cid}) + * button p::after,'
+                f'.element-container:has(.now-m-{cid}) + .element-container button p::after,'
+                f'[data-testid="element-container"]:has(.now-m-{cid})'
+                f' + [data-testid="element-container"] button p::after')
+        sela = (f':has(.now-m-{cid}) + * button::after,'
+                f'.element-container:has(.now-m-{cid}) + .element-container button::after,'
+                f'[data-testid="element-container"]:has(.now-m-{cid})'
+                f' + [data-testid="element-container"] button::after')
+        css += (
+            f'{sel}{{background:{bg}!important;border:1px solid #334155!important;'
+            f'border-radius:12px!important;min-height:96px!important;'
+            f'width:100%!important;text-align:left!important;padding:16px 20px!important;'
+            f'color:#F1F5F9!important;font-weight:700!important;font-size:1rem!important;'
+            f'box-shadow:none!important;cursor:pointer!important;'
+            f'display:flex!important;flex-direction:column!important;'
+            f'align-items:flex-start!important;}}'
+            f'{selp}{{content:"{role}";display:block;'
+            f'font-size:0.8rem;font-weight:400;color:#94A3B8;margin-top:4px;}}'
+            f'{sela}{{content:"{label}";display:block;'
+            f'font-size:0.85rem;font-weight:600;color:{fg};margin-top:10px;}}'
+        )
+    css += "</style>"
+    st.markdown(css, unsafe_allow_html=True)
 
-        name_s = emp["name"].replace("<", "&lt;").replace(">", "&gt;")
-        role_s = emp["role"].replace("<", "&lt;").replace(">", "&gt;")
-
+    cols = st.columns(4)
+    for i, (emp, cid) in enumerate(card_data):
         with cols[i % 4]:
-            # Inline styles guarantee the correct background regardless of Streamlit DOM structure
-            st.markdown(
-                f'<div style="background:{bg};border:1px solid #334155;border-radius:12px;'
-                f'min-height:96px;padding:16px 20px;margin-bottom:4px;">'
-                f'<div style="font-weight:700;font-size:1rem;color:#F1F5F9;">{name_s}</div>'
-                f'<div style="font-size:0.8rem;color:#94A3B8;margin-top:4px;">{role_s}</div>'
-                f'<div style="font-size:0.85rem;font-weight:600;color:{fg};margin-top:10px;">{status_label}</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-            if st.button("📋 Pattern", key=f"now_btn_{cid}", use_container_width=True):
+            # <span> (inline element) stays valid inside Streamlit's <p> wrapper —
+            # a <div> would cause the browser HTML parser to restructure the DOM,
+            # breaking the adjacent-sibling CSS selector.
+            st.markdown(f'<span class="now-m-{cid}" style="display:none"></span>',
+                        unsafe_allow_html=True)
+            if st.button(emp["name"], key=f"now_btn_{cid}", use_container_width=True):
                 _pattern_dialog(emp)
 
 
