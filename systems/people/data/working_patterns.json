@@ -1,0 +1,30 @@
+{
+  "39540218-cb56-4f8d-9057-61b4b1765d5c": {
+    "employee_id": "39540218-cb56-4f8d-9057-61b4b1765d5c",
+    "patterns": {
+      "sunday": [
+        {
+          "start": "10:00",
+          "end": "17:00",
+          "location": "home"
+        }
+      ],
+      "monday": [
+        {
+          "start": "08:00",
+          "end": "10:00",
+          "location": "home"
+        },
+        {
+          "start": "11:00",
+          "end": "16:00",
+          "location": "home"
+        }
+      ],
+      "tuesday": [],
+      "wednesday": [],
+      "thursday": []
+    },
+    "updated_at": "2026-05-18T19:29:26.574553"
+  }
+}
