@@ -18,7 +18,7 @@
         {
           "start": "11:00",
           "end": "16:00",
-          "location": "home"
+          "location": "office"
         }
       ],
       "tuesday": [
@@ -36,6 +36,6 @@
       "wednesday": [],
       "thursday": []
     },
-    "updated_at": "2026-05-18T19:29:52.286963"
+    "updated_at": "2026-05-18T19:30:00.582492"
   }
 }
