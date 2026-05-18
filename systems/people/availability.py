@@ -73,23 +73,10 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     text-transform: uppercase; letter-spacing: 0.1em;
 }
 
-/* ── Now-cards ── */
-.now-card {
-    border-radius: 12px;
-    padding: 16px 20px;
-    margin-bottom: 10px;
-    border: 1px solid #334155;
-    transition: border-color 0.15s;
-}
-.now-card-name   { font-weight: 700; color: #F1F5F9; font-size: 1rem; }
-.now-card-role   { font-size: 0.8rem; color: #94A3B8; margin-top: 2px; }
-.now-card-status { font-size: 0.85rem; font-weight: 600; margin-top: 10px; }
-/*
- * Per-card overlay technique (injected inline per employee):
- *   A unique marker class anchors CSS selectors for each card.
- *   The st.button renders FIRST (transparent, full card height, z-index 2).
- *   The HTML card renders SECOND (visual, pulled up via negative margin, z-index 1).
- *   Clicking anywhere on the card area hits the invisible button above it.
+/* ── Now-cards ──
+ * The st.button IS the entire card.
+ * Role and status are injected via CSS ::after pseudo-elements so they
+ * appear inside the button with their own colours — no extra DOM elements.
  */
 
 .next-row  { background:#1E293B; border-radius:8px; padding:10px 14px; margin-bottom:6px; font-size:0.88rem; color:#CBD5E1; }
@@ -271,48 +258,49 @@ def _section_now(employees: list[dict], day: str, time_str: str) -> None:
         status = get_status_now(emp["id"], day, time_str)
         meta   = STATUS_META[status]
         cid    = emp["id"]
+        bg     = meta["bg"]
+        fg     = meta["color"]
+        # Escape quotes so they're safe inside CSS string values
+        role   = emp["role"].replace('"', '\\"')
+        label  = meta["label"].replace('"', '\\"')
         with cols[i % 4]:
-            # Unique marker + per-card CSS injected together in one element-container.
-            # Selectors use the marker class to target the button (next sibling)
-            # and the card (sibling after that) without relying on Streamlit internals.
             st.markdown(
                 f'<div class="now-m-{cid}"></div>'
                 f'<style>'
-                # Button element-container: sits on top (z-index 2)
+                # Button container
                 f'[data-testid="element-container"]:has(.now-m-{cid})'
                 f' + [data-testid="element-container"]'
                 f'{{position:relative;z-index:2;}}'
-                # Button itself: transparent, full card height, pointer cursor
+                # Button = full card: coloured background, border, rounded corners
                 f'[data-testid="element-container"]:has(.now-m-{cid})'
                 f' + [data-testid="element-container"] button'
-                f'{{background:transparent!important;border:none!important;'
-                f'box-shadow:none!important;color:transparent!important;'
-                f'min-height:96px!important;width:100%!important;'
-                f'cursor:pointer!important;padding:0!important;}}'
-                # Card element-container: behind button (z-index 1), pulled up
+                f'{{background:{bg}!important;border:1px solid #334155!important;'
+                f'border-radius:12px!important;min-height:96px!important;'
+                f'width:100%!important;text-align:left!important;'
+                f'padding:16px 20px 16px!important;color:#F1F5F9!important;'
+                f'font-weight:700!important;font-size:1rem!important;'
+                f'box-shadow:none!important;cursor:pointer!important;'
+                f'display:flex!important;flex-direction:column!important;'
+                f'align-items:flex-start!important;}}'
+                # Role — injected after the name <p> inside the button
                 f'[data-testid="element-container"]:has(.now-m-{cid})'
-                f' + [data-testid="element-container"]'
-                f' + [data-testid="element-container"]'
-                f'{{position:relative;z-index:1;margin-top:-104px;}}'
-                # Hover: brighten card border when user hovers the invisible button
-                f'[data-testid="stVerticalBlock"]:has(.now-m-{cid}):has(button:hover) .now-card'
-                f'{{border-color:#60A5FA;}}'
+                f' + [data-testid="element-container"] button p::after'
+                f'{{content:"{role}";display:block;'
+                f'font-size:0.8rem;font-weight:400;color:#94A3B8;margin-top:4px;}}'
+                # Status — injected as button ::after flex item
+                f'[data-testid="element-container"]:has(.now-m-{cid})'
+                f' + [data-testid="element-container"] button::after'
+                f'{{content:"{label}";display:block;'
+                f'font-size:0.85rem;font-weight:600;color:{fg};margin-top:10px;}}'
+                # Hover
+                f'[data-testid="element-container"]:has(.now-m-{cid})'
+                f' + [data-testid="element-container"] button:hover'
+                f'{{opacity:0.85!important;border-color:#60A5FA!important;}}'
                 f'</style>',
                 unsafe_allow_html=True,
             )
-            # Invisible click overlay — triggers the pattern dialog
             if st.button(emp["name"], key=f"now_btn_{cid}", use_container_width=True):
                 _pattern_dialog(emp)
-            # Original card design — name, role, status, coloured background
-            st.markdown(
-                f'<div class="now-card" style="background:{meta["bg"]};">'
-                f'<div class="now-card-name">{emp["name"]}</div>'
-                f'<div class="now-card-role">{emp["role"]}</div>'
-                f'<div class="now-card-status" style="color:{meta["color"]};">'
-                f'{meta["label"]}</div>'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
 
 
 # ── Upcoming transitions within the next hour ─────────────────────────────────
