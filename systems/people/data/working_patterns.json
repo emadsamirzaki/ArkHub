@@ -114,7 +114,13 @@
   "c3d2bcbe-b75f-476e-8893-799ee199ca39": {
     "employee_id": "c3d2bcbe-b75f-476e-8893-799ee199ca39",
     "patterns": {
-      "sunday": [],
+      "sunday": [
+        {
+          "start": "11:00",
+          "end": "19:00",
+          "location": "home"
+        }
+      ],
       "monday": [],
       "tuesday": [],
       "wednesday": [],
@@ -126,6 +132,6 @@
         }
       ]
     },
-    "updated_at": "2026-05-19T05:54:47.822825"
+    "updated_at": "2026-05-19T05:55:00.944164"
   }
 }
