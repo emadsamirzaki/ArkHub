@@ -135,7 +135,13 @@
           "location": "office"
         }
       ],
-      "wednesday": [],
+      "wednesday": [
+        {
+          "start": "11:00",
+          "end": "19:00",
+          "location": "office"
+        }
+      ],
       "thursday": [
         {
           "start": "11:00",
@@ -144,6 +150,6 @@
         }
       ]
     },
-    "updated_at": "2026-05-19T05:55:42.738565"
+    "updated_at": "2026-05-19T05:55:56.676114"
   }
 }
