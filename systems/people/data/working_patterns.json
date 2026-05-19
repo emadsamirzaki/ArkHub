@@ -54,5 +54,22 @@
       ]
     },
     "updated_at": "2026-05-18T19:30:55.129854"
+  },
+  "df84a874-926d-4355-9500-c12c853da80d": {
+    "employee_id": "df84a874-926d-4355-9500-c12c853da80d",
+    "patterns": {
+      "sunday": [
+        {
+          "start": "09:00",
+          "end": "15:00",
+          "location": "home"
+        }
+      ],
+      "monday": [],
+      "tuesday": [],
+      "wednesday": [],
+      "thursday": []
+    },
+    "updated_at": "2026-05-19T05:52:01.881137"
   }
 }
