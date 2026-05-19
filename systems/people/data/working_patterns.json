@@ -101,8 +101,14 @@
           "location": "home"
         }
       ],
-      "thursday": []
+      "thursday": [
+        {
+          "start": "09:00",
+          "end": "15:00",
+          "location": "home"
+        }
+      ]
     },
-    "updated_at": "2026-05-19T05:53:49.805421"
+    "updated_at": "2026-05-19T05:54:04.571515"
   }
 }
