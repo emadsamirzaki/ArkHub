@@ -89,9 +89,20 @@
           "location": "home"
         }
       ],
-      "wednesday": [],
+      "wednesday": [
+        {
+          "start": "10:00",
+          "end": "15:00",
+          "location": "office"
+        },
+        {
+          "start": "20:00",
+          "end": "22:00",
+          "location": "home"
+        }
+      ],
       "thursday": []
     },
-    "updated_at": "2026-05-19T05:53:16.107350"
+    "updated_at": "2026-05-19T05:53:49.805421"
   }
 }
