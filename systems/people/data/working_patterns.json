@@ -77,10 +77,21 @@
           "location": "home"
         }
       ],
-      "tuesday": [],
+      "tuesday": [
+        {
+          "start": "10:00",
+          "end": "16:00",
+          "location": "office"
+        },
+        {
+          "start": "20:00",
+          "end": "22:00",
+          "location": "home"
+        }
+      ],
       "wednesday": [],
       "thursday": []
     },
-    "updated_at": "2026-05-19T05:52:37.622683"
+    "updated_at": "2026-05-19T05:53:16.107350"
   }
 }
