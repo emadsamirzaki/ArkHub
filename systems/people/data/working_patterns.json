@@ -121,7 +121,13 @@
           "location": "home"
         }
       ],
-      "monday": [],
+      "monday": [
+        {
+          "start": "11:00",
+          "end": "19:00",
+          "location": "office"
+        }
+      ],
       "tuesday": [],
       "wednesday": [],
       "thursday": [
@@ -132,6 +138,6 @@
         }
       ]
     },
-    "updated_at": "2026-05-19T05:55:00.944164"
+    "updated_at": "2026-05-19T05:55:20.560244"
   }
 }
