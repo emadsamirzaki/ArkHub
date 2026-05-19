@@ -1,0 +1,100 @@
+[
+  {
+    "id": "3a6f4f15-6e35-4a9d-8788-7c2f3c6a9b2a",
+    "name": "AUC",
+    "pm": "Emad Samir",
+    "status": "Active",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "875a723a-dca0-4c39-b2b3-b2f9c918215e",
+    "name": "Nile University",
+    "pm": "Emad Samir",
+    "status": "Active",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "e61e0a4e-ecc8-4897-9e29-219ea0292d79",
+    "name": "EUI",
+    "pm": "Emad Samir",
+    "status": "Active",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "c6a10b84-1142-45fe-a974-3d53a56f7e30",
+    "name": "ETA",
+    "pm": "Emad Samir",
+    "status": "Active",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "24604a57-b6f2-4ad1-aed1-c0ef0ae4b441",
+    "name": "SP - Service Provider",
+    "pm": "Emad Samir",
+    "status": "Active",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "013f6268-f1b8-49d9-8c13-033ac18d0df5",
+    "name": "eFinance-Investment",
+    "pm": "Emad Samir",
+    "status": "Active",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "27da5a90-3870-4987-98cb-84094ecc4ec5",
+    "name": "Gather Voices",
+    "pm": "John Seleem",
+    "status": "Active",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "f876cd7e-63ba-43cb-a235-5abbd82e5395",
+    "name": "Mashplant",
+    "pm": "John Seleem",
+    "status": "Active",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "826625d0-7446-46c3-af5a-d7e0c30b740e",
+    "name": "Hadar",
+    "pm": "John Seleem",
+    "status": "Active",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "b316835d-a89f-4fc7-bc32-05829eca3861",
+    "name": "ProjectZug",
+    "pm": "John Seleem",
+    "status": "Active",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "ca8af389-7d77-4f84-a296-5d947fa54b23",
+    "name": "JEN",
+    "pm": "John Seleem",
+    "status": "Inactive",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "0fae5b9d-6d90-44be-b6dd-feeb30b27ae1",
+    "name": "Mysti",
+    "pm": "Mary Adel",
+    "status": "Inactive",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "1e99978a-2dea-40ba-b08b-5cfc212ebf4f",
+    "name": "50 over 50",
+    "pm": "Mary Adel",
+    "status": "Inactive",
+    "created_at": "2026-05-18"
+  },
+  {
+    "id": "783e1a01-461f-40ad-b7b6-1100b970c532",
+    "name": "AI StoryBooth website",
+    "pm": "Mary Adel",
+    "status": "Inactive",
+    "created_at": "2026-05-18"
+  }
+]
