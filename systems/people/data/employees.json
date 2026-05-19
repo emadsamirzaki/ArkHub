@@ -25,5 +25,14 @@
     "role": "Developer",
     "status": "Active",
     "created_at": "2026-05-19"
+  },
+  {
+    "id": "da8e03ae-8810-486c-8514-ba4e4c853403",
+    "name": "Abdelrahman Mohamed",
+    "email": "amohamed@arkdev.net",
+    "mobile": "01066814380",
+    "role": "Developer",
+    "status": "Active",
+    "created_at": "2026-05-19"
   }
 ]
