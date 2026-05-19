@@ -109,6 +109,16 @@ def _to_min(t: str) -> int:
 def _pattern_dialog(emp: dict) -> None:
     pat = get_pattern(emp["id"])
     st.markdown(f"**{emp['name']}** — {emp['role']}")
+    parts = []
+    if emp.get("email"):
+        parts.append(f'✉️ {emp["email"]}')
+    if emp.get("mobile"):
+        parts.append(f'📱 {emp["mobile"]}')
+    if parts:
+        st.markdown(
+            f'<span style="font-size:0.85rem;color:#94A3B8;">{"&nbsp;&nbsp;|&nbsp;&nbsp;".join(parts)}</span>',
+            unsafe_allow_html=True,
+        )
     st.divider()
     if not pat:
         st.info("No working pattern set yet.")
