@@ -88,5 +88,14 @@
     "note_type": null,
     "note_text": null,
     "submitted_at": "2026-05-18T17:12:21.038705"
+  },
+  {
+    "id": "10af84e3-a131-43ff-aca1-8732e187d048",
+    "project_id": "e61e0a4e-ecc8-4897-9e29-219ea0292d79",
+    "week_label": "2026-W22 – May 24 – 28, 2026",
+    "health_status": "On Track",
+    "note_type": "Note",
+    "note_text": "Project is paused, client is sleeping",
+    "submitted_at": "2026-06-01T16:00:12.685085"
   }
 ]
