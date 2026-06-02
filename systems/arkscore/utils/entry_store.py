@@ -64,6 +64,15 @@ def upsert_entry(
     return entry
 
 
+def delete_week_entries(week_label: str) -> int:
+    entries = load_entries()
+    kept = [e for e in entries if e["week_label"] != week_label]
+    removed = len(entries) - len(kept)
+    if removed:
+        save_entries(kept)
+    return removed
+
+
 def get_all_weeks() -> list[str]:
     entries = load_entries()
     return sorted({e["week_label"] for e in entries}, reverse=True)

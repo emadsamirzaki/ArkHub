@@ -10,7 +10,7 @@ import html as _html
 import pandas as pd
 import streamlit as st
 
-from systems.arkscore.utils.entry_store import get_all_weeks, get_entries_for_week
+from systems.arkscore.utils.entry_store import delete_week_entries, get_all_weeks, get_entries_for_week
 from systems.arkscore.utils.project_store import get_active_projects
 
 ON_TRACK_THRESHOLD = 85.0
@@ -141,9 +141,30 @@ def main() -> None:
             st.warning("You also have no active projects. Add them in **Project Management**.")
         return
 
-    col_sel, _ = st.columns([2, 5])
+    col_sel, col_del, _ = st.columns([2, 1, 4])
     with col_sel:
         week_label = st.selectbox("Select Week", all_weeks, index=0)
+    with col_del:
+        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+        if st.button("🗑️ Delete Week", type="secondary"):
+            st.session_state["_oh_confirm_delete"] = week_label
+
+    if st.session_state.get("_oh_confirm_delete") == week_label:
+        st.warning(
+            f"Delete **all check-in entries** for **{week_label}**? This cannot be undone.",
+            icon="⚠️",
+        )
+        c1, c2, *_ = st.columns([1, 1, 6])
+        with c1:
+            if st.button("Yes, delete", type="primary"):
+                removed = delete_week_entries(week_label)
+                st.session_state.pop("_oh_confirm_delete", None)
+                st.success(f"Deleted {removed} entries for {week_label}.")
+                st.rerun()
+        with c2:
+            if st.button("Cancel"):
+                st.session_state.pop("_oh_confirm_delete", None)
+                st.rerun()
 
     entries_this_week = get_entries_for_week(week_label)
     entry_by_project  = {e["project_id"]: e for e in entries_this_week}
