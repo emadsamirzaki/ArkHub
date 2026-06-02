@@ -144,42 +144,6 @@
     "submitted_at": "2026-06-01T16:00:40.088892"
   },
   {
-    "id": "dfdeb562-1d1d-4585-b82c-6e07cf833ab3",
-    "project_id": "27da5a90-3870-4987-98cb-84094ecc4ec5",
-    "week_label": "2026-W23 – May 31 – Jun 4, 2026",
-    "health_status": "On Track",
-    "note_type": null,
-    "note_text": null,
-    "submitted_at": "2026-06-01T16:10:52.738304"
-  },
-  {
-    "id": "a8f0c691-638b-47b9-916f-0bc84d80d301",
-    "project_id": "f876cd7e-63ba-43cb-a235-5abbd82e5395",
-    "week_label": "2026-W23 – May 31 – Jun 4, 2026",
-    "health_status": "On Track",
-    "note_type": null,
-    "note_text": null,
-    "submitted_at": "2026-06-01T16:10:53.902663"
-  },
-  {
-    "id": "35faff18-2eb9-4bda-8c68-673f261735a7",
-    "project_id": "826625d0-7446-46c3-af5a-d7e0c30b740e",
-    "week_label": "2026-W23 – May 31 – Jun 4, 2026",
-    "health_status": "On Track",
-    "note_type": null,
-    "note_text": null,
-    "submitted_at": "2026-06-01T16:10:55.111503"
-  },
-  {
-    "id": "5b734b0b-51a4-46f3-9d0d-4c0de13cc5d8",
-    "project_id": "b316835d-a89f-4fc7-bc32-05829eca3861",
-    "week_label": "2026-W23 – May 31 – Jun 4, 2026",
-    "health_status": "On Track",
-    "note_type": null,
-    "note_text": null,
-    "submitted_at": "2026-06-01T16:10:56.371734"
-  },
-  {
     "id": "c04ed2e7-aab7-4db6-849d-bc1f39f51b7e",
     "project_id": "f876cd7e-63ba-43cb-a235-5abbd82e5395",
     "week_label": "2026-W22 – May 24 – 28, 2026",
