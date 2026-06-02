@@ -54,5 +54,102 @@
       ]
     },
     "updated_at": "2026-05-18T19:30:55.129854"
+  },
+  "df84a874-926d-4355-9500-c12c853da80d": {
+    "employee_id": "df84a874-926d-4355-9500-c12c853da80d",
+    "patterns": {
+      "sunday": [
+        {
+          "start": "09:00",
+          "end": "15:00",
+          "location": "home"
+        }
+      ],
+      "monday": [
+        {
+          "start": "10:00",
+          "end": "16:00",
+          "location": "office"
+        },
+        {
+          "start": "20:00",
+          "end": "22:00",
+          "location": "home"
+        }
+      ],
+      "tuesday": [
+        {
+          "start": "10:00",
+          "end": "16:00",
+          "location": "office"
+        },
+        {
+          "start": "20:00",
+          "end": "22:00",
+          "location": "home"
+        }
+      ],
+      "wednesday": [
+        {
+          "start": "10:00",
+          "end": "15:00",
+          "location": "office"
+        },
+        {
+          "start": "20:00",
+          "end": "22:00",
+          "location": "home"
+        }
+      ],
+      "thursday": [
+        {
+          "start": "09:00",
+          "end": "15:00",
+          "location": "home"
+        }
+      ]
+    },
+    "updated_at": "2026-05-19T05:54:04.571515"
+  },
+  "c3d2bcbe-b75f-476e-8893-799ee199ca39": {
+    "employee_id": "c3d2bcbe-b75f-476e-8893-799ee199ca39",
+    "patterns": {
+      "sunday": [
+        {
+          "start": "11:00",
+          "end": "19:00",
+          "location": "home"
+        }
+      ],
+      "monday": [
+        {
+          "start": "11:00",
+          "end": "19:00",
+          "location": "office"
+        }
+      ],
+      "tuesday": [
+        {
+          "start": "11:00",
+          "end": "19:00",
+          "location": "office"
+        }
+      ],
+      "wednesday": [
+        {
+          "start": "11:00",
+          "end": "19:00",
+          "location": "office"
+        }
+      ],
+      "thursday": [
+        {
+          "start": "11:00",
+          "end": "18:00",
+          "location": "home"
+        }
+      ]
+    },
+    "updated_at": "2026-05-19T05:55:56.676114"
   }
 }
