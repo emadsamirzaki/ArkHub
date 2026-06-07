@@ -1,42 +1,49 @@
 """
 utils/utilization_store.py
-Persist weekly Clockify reports as JSON.
-Structure: { week_label: { id, week_label, week_start, week_end, uploaded_at, raw_rows } }
+Persist weekly Clockify reports in Neon PostgreSQL.
 """
 
 from __future__ import annotations
 
+import json
+import math
 import uuid
 from datetime import datetime
-from pathlib import Path
 
-from systems.utils.github_store import read_json, write_json
+import psycopg2.extras
 
-_REPO_PATH  = "systems/arkscore/data/utilization_reports.json"
-_LOCAL_PATH = Path(__file__).parent.parent / "data" / "utilization_reports.json"
+from systems.utils.db import db_cursor
 
 
-def _default(obj):
-    if hasattr(obj, "isoformat"):
-        return obj.isoformat()
-    if hasattr(obj, "item"):
+def _sanitize(obj):
+    """Recursively convert raw Clockify row data to JSON-safe Python types."""
+    if isinstance(obj, dict):
+        return {k: _sanitize(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize(v) for v in obj]
+    if isinstance(obj, float) and math.isnan(obj):
+        return None
+    if hasattr(obj, "item"):  # numpy scalar
         return obj.item()
-    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+    if hasattr(obj, "isoformat"):  # datetime
+        return obj.isoformat()
+    return obj
 
 
-def _load() -> dict:
-    return read_json(_REPO_PATH, _LOCAL_PATH, {})
-
-
-def _save(data: dict) -> None:
-    write_json(_REPO_PATH, _LOCAL_PATH, data, "Update utilization reports", json_default=_default)
+def _row_to_dict(row: dict) -> dict:
+    r = dict(row)
+    if isinstance(r["raw_rows"], str):
+        r["raw_rows"] = json.loads(r["raw_rows"])
+    return r
 
 
 def get_all_reports() -> list[dict]:
-    data = _load()
-    reports = list(data.values())
-    reports.sort(key=lambda r: r.get("week_start", ""), reverse=True)
-    return reports
+    with db_cursor() as cur:
+        cur.execute(
+            "SELECT id, week_label, week_start, week_end, uploaded_at, raw_rows"
+            " FROM utilization_reports ORDER BY week_start DESC"
+        )
+        return [_row_to_dict(row) for row in cur.fetchall()]
 
 
 def get_all_week_labels() -> list[str]:
@@ -44,7 +51,14 @@ def get_all_week_labels() -> list[str]:
 
 
 def get_report(week_label: str) -> dict | None:
-    return _load().get(week_label)
+    with db_cursor() as cur:
+        cur.execute(
+            "SELECT id, week_label, week_start, week_end, uploaded_at, raw_rows"
+            " FROM utilization_reports WHERE week_label = %s",
+            (week_label,),
+        )
+        row = cur.fetchone()
+    return _row_to_dict(row) if row else None
 
 
 def upsert_report(
@@ -53,29 +67,47 @@ def upsert_report(
     week_end: str,
     raw_rows: list[dict],
 ) -> dict:
-    data = _load()
-    existing = data.get(week_label, {})
-    report: dict = {
-        "id":          existing.get("id", str(uuid.uuid4())),
+    safe_rows   = _sanitize(raw_rows)
+    uploaded_at = datetime.now().isoformat()
+    with db_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO utilization_reports (id, week_label, week_start, week_end, uploaded_at, raw_rows)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (week_label) DO UPDATE SET
+                week_start  = EXCLUDED.week_start,
+                week_end    = EXCLUDED.week_end,
+                uploaded_at = EXCLUDED.uploaded_at,
+                raw_rows    = EXCLUDED.raw_rows
+            RETURNING id
+            """,
+            (str(uuid.uuid4()), week_label, week_start, week_end,
+             uploaded_at, psycopg2.extras.Json(safe_rows)),
+        )
+        actual_id = cur.fetchone()["id"]
+    return {
+        "id":          actual_id,
         "week_label":  week_label,
         "week_start":  week_start,
         "week_end":    week_end,
-        "uploaded_at": datetime.now().isoformat(),
-        "raw_rows":    raw_rows,
+        "uploaded_at": uploaded_at,
+        "raw_rows":    safe_rows,
     }
-    data[week_label] = report
-    _save(data)
-    return report
 
 
 def delete_report(week_label: str) -> bool:
-    data = _load()
-    if week_label in data:
-        del data[week_label]
-        _save(data)
-        return True
-    return False
+    with db_cursor() as cur:
+        cur.execute(
+            "DELETE FROM utilization_reports WHERE week_label = %s RETURNING id",
+            (week_label,),
+        )
+        return cur.fetchone() is not None
 
 
 def report_exists(week_label: str) -> bool:
-    return week_label in _load()
+    with db_cursor() as cur:
+        cur.execute(
+            "SELECT 1 FROM utilization_reports WHERE week_label = %s",
+            (week_label,),
+        )
+        return cur.fetchone() is not None

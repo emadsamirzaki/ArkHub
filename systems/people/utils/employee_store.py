@@ -7,20 +7,28 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
-from pathlib import Path
 
-from systems.utils.github_store import read_json, write_json
-
-_REPO_PATH  = "systems/people/data/employees.json"
-_LOCAL_PATH = Path(__file__).parent.parent / "data" / "employees.json"
+from systems.utils.db import db_cursor
 
 
 def load_employees() -> list[dict]:
-    return read_json(_REPO_PATH, _LOCAL_PATH, [])
+    with db_cursor() as cur:
+        cur.execute(
+            "SELECT id, name, email, mobile, role, status, created_at FROM employees ORDER BY created_at"
+        )
+        return [dict(row) for row in cur.fetchall()]
 
 
 def save_employees(employees: list[dict]) -> None:
-    write_json(_REPO_PATH, _LOCAL_PATH, employees, "Update employees")
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM employees")
+        for e in employees:
+            cur.execute(
+                "INSERT INTO employees (id, name, email, mobile, role, status, created_at)"
+                " VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                (e["id"], e["name"], e["email"], e.get("mobile", ""),
+                 e["role"], e["status"], e["created_at"]),
+            )
 
 
 def get_all_roles() -> list[str]:

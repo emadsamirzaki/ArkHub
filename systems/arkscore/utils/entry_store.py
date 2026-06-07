@@ -7,20 +7,30 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime, timedelta
-from pathlib import Path
 
-from systems.utils.github_store import read_json, write_json
-
-_REPO_PATH  = "systems/arkscore/data/entries.json"
-_LOCAL_PATH = Path(__file__).parent.parent / "data" / "entries.json"
+from systems.utils.db import db_cursor
 
 
 def load_entries() -> list[dict]:
-    return read_json(_REPO_PATH, _LOCAL_PATH, [])
+    with db_cursor() as cur:
+        cur.execute(
+            "SELECT id, project_id, week_label, health_status, note_type, note_text, submitted_at"
+            " FROM entries"
+        )
+        return [dict(row) for row in cur.fetchall()]
 
 
 def save_entries(entries: list[dict]) -> None:
-    write_json(_REPO_PATH, _LOCAL_PATH, entries, "Update check-in entries")
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM entries")
+        for e in entries:
+            cur.execute(
+                "INSERT INTO entries"
+                " (id, project_id, week_label, health_status, note_type, note_text, submitted_at)"
+                " VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                (e["id"], e["project_id"], e["week_label"], e["health_status"],
+                 e.get("note_type"), e.get("note_text"), e["submitted_at"]),
+            )
 
 
 def get_entry(project_id: str, week_label: str) -> dict | None:

@@ -7,20 +7,26 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
-from pathlib import Path
 
-from systems.utils.github_store import read_json, write_json
-
-_REPO_PATH  = "systems/arkscore/data/projects.json"
-_LOCAL_PATH = Path(__file__).parent.parent / "data" / "projects.json"
+from systems.utils.db import db_cursor
 
 
 def load_projects() -> list[dict]:
-    return read_json(_REPO_PATH, _LOCAL_PATH, [])
+    with db_cursor() as cur:
+        cur.execute(
+            "SELECT id, name, pm, status, created_at FROM projects ORDER BY created_at"
+        )
+        return [dict(row) for row in cur.fetchall()]
 
 
 def save_projects(projects: list[dict]) -> None:
-    write_json(_REPO_PATH, _LOCAL_PATH, projects, "Update projects")
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM projects")
+        for p in projects:
+            cur.execute(
+                "INSERT INTO projects (id, name, pm, status, created_at) VALUES (%s,%s,%s,%s,%s)",
+                (p["id"], p["name"], p["pm"], p["status"], p["created_at"]),
+            )
 
 
 def get_active_projects() -> list[dict]:

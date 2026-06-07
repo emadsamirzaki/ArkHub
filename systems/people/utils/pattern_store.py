@@ -5,23 +5,41 @@ Working-pattern store — weekly schedules for each employee.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime
-from pathlib import Path
 
-from systems.utils.github_store import read_json, write_json
+import psycopg2.extras
 
-_REPO_PATH  = "systems/people/data/working_patterns.json"
-_LOCAL_PATH = Path(__file__).parent.parent / "data" / "working_patterns.json"
+from systems.utils.db import db_cursor
 
 DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday"]
 
 
 def load_patterns() -> dict:
-    return read_json(_REPO_PATH, _LOCAL_PATH, {})
+    with db_cursor() as cur:
+        cur.execute("SELECT employee_id, patterns, updated_at FROM working_patterns")
+        result = {}
+        for row in cur.fetchall():
+            emp_id   = row["employee_id"]
+            patterns = row["patterns"]
+            if isinstance(patterns, str):
+                patterns = json.loads(patterns)
+            result[emp_id] = {
+                "employee_id": emp_id,
+                "patterns":    patterns,
+                "updated_at":  row["updated_at"],
+            }
+        return result
 
 
 def save_patterns(data: dict) -> None:
-    write_json(_REPO_PATH, _LOCAL_PATH, data, "Update working patterns")
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM working_patterns")
+        for emp_id, record in data.items():
+            cur.execute(
+                "INSERT INTO working_patterns (employee_id, patterns, updated_at) VALUES (%s,%s,%s)",
+                (emp_id, psycopg2.extras.Json(record["patterns"]), record["updated_at"]),
+            )
 
 
 def get_pattern(emp_id: str) -> dict | None:
@@ -32,8 +50,8 @@ def upsert_pattern(emp_id: str, patterns: dict) -> None:
     data = load_patterns()
     data[emp_id] = {
         "employee_id": emp_id,
-        "patterns": patterns,
-        "updated_at": datetime.utcnow().isoformat(),
+        "patterns":    patterns,
+        "updated_at":  datetime.utcnow().isoformat(),
     }
     save_patterns(data)
 
@@ -67,7 +85,6 @@ def get_next_transition(emp_id: str, day: str, time_str: str) -> tuple[str, str]
     slots = pat.get("patterns", {}).get(day, [])
     current = get_status_now(emp_id, day, time_str)
 
-    # Collect all boundary times after now
     boundaries: list[str] = []
     for slot in slots:
         if slot["start"] > time_str:
