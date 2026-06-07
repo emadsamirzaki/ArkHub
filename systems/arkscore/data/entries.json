@@ -178,5 +178,14 @@
     "note_type": null,
     "note_text": null,
     "submitted_at": "2026-06-01T18:37:57.383015"
+  },
+  {
+    "id": "80881668-fb64-42bb-85e6-3c3d63065888",
+    "project_id": "27da5a90-3870-4987-98cb-84094ecc4ec5",
+    "week_label": "2026-W24 – Jun 7 – 11, 2026",
+    "health_status": "On Track",
+    "note_type": null,
+    "note_text": null,
+    "submitted_at": "2026-06-07T14:15:54.209091"
   }
 ]
