@@ -626,7 +626,7 @@ table_html = f"""
          _met_lt("gv_dependency_pct", 70))}
     {section_row("👥 People", "sc-section-people")}
     {row(7, "People",
-         "Employee Red Flags",
+         'Employee Red Flags <a href="https://docs.google.com/spreadsheets/d/1G3T7Wf2KZpwTgLE4fbv19IFii7ZPJe3hNGqjy-JaoZo/edit?resourcekey=&gid=543241089#gid=543241089" target="_blank" style="color:#60A5FA; text-decoration:none; margin-left:6px;">📋</a>',
          "#6s / #5s / #4-or-less satisfaction scores",
          m7_val,
          "≤2 / ≤1 / 0",
