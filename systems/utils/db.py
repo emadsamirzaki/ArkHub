@@ -57,6 +57,13 @@ CREATE TABLE IF NOT EXISTS utilization_reports (
     uploaded_at TEXT NOT NULL,
     raw_rows    JSONB NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS scorecard_entries (
+    id           TEXT PRIMARY KEY,
+    week_label   TEXT UNIQUE NOT NULL,
+    data         JSONB NOT NULL,
+    submitted_at TEXT NOT NULL
+);
 """
 
 

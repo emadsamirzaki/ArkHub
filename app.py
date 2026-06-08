@@ -48,7 +48,9 @@ pg = st.navigation(
             st.Page("views/home.py", title="Home", icon="🏠", default=True, url_path=""),
         ],
         "ArkScore": [
-            st.Page("systems/arkscore/home.py",                    title="Overview",              icon="📋", url_path="arkscore"),
+            st.Page("systems/arkscore/home.py",                    title="Overview",                       icon="📋", url_path="arkscore"),
+            st.Page("systems/arkscore/scorecard_dashboard.py",     title="L10 Scorecard",                  icon="🏆", url_path="scorecard"),
+            st.Page("systems/arkscore/scorecard_entry.py",         title="L10 Weekly Scorecard Entry",     icon="📝", url_path="scorecard_entry"),
             st.Page("systems/arkscore/utilization_dashboard.py",   title="Utilization Dashboard", icon="📊"),
             st.Page("systems/arkscore/utilization_checkin.py",     title="Utilization Check-in",  icon="📤"),
             st.Page("systems/arkscore/operational_health.py",      title="Operational Health",    icon="🟢"),
@@ -70,6 +72,10 @@ with st.sidebar:
     st.markdown('<span class="sidebar-top-label">ArkScore</span>', unsafe_allow_html=True)
     with st.expander("📊 ArkScore", expanded=True):
         st.page_link("systems/arkscore/home.py", label="Overview", icon="📋")
+
+        st.markdown('<span class="sidebar-section-label">Scorecard</span>', unsafe_allow_html=True)
+        st.page_link("systems/arkscore/scorecard_dashboard.py", label="L10 Scorecard", icon="🏆")
+        st.page_link("systems/arkscore/scorecard_entry.py",     label="L10 Weekly Scorecard Entry",     icon="📝")
 
         st.markdown('<span class="sidebar-section-label">Utilization</span>', unsafe_allow_html=True)
         st.page_link("systems/arkscore/utilization_dashboard.py", label="Dashboard", icon="📊")

@@ -124,30 +124,24 @@ st.markdown(
 # ── Body ──────────────────────────────────────────────────────────────────────
 col_modules, col_guide = st.columns([3, 2], gap="large")
 
-MODULES = [
-    ("✅", "Utilization %",      "Team time utilisation vs. 35 h weekly target",              True),
-    ("✅", "Operational Health", "Project delivery status, weekly check-ins, health score",   True),
-    ("🔒", "Client Health",      "NPS, satisfaction scores, escalation tracking",             False),
-    ("🔒", "Process Compliance", "Checklist adherence and process audit results",             False),
-    ("🔒", "Revenue per Head",   "Revenue efficiency and headcount ratios",                   False),
-    ("🔒", "BD Conversations",   "Pipeline activity, outreach, and conversion",               False),
-    ("🔒", "Rock Completion",    "Quarterly rock progress and completion rates",               False),
+SCORECARD_MODULES = [
+    ("🏆", "L10 Scorecard",              "Weekly leadership dashboard with 10 key metrics",                  "scorecard"),
+    ("📝", "L10 Weekly Scorecard Entry", "Enter and update metrics for the leadership meeting",              "scorecard_entry"),
 ]
 
 with col_modules:
-    st.markdown("### Scorecard Modules")
-    for icon, name, desc, active in MODULES:
-        row_class   = "module-row active" if active else "module-row"
-        badge_class = "badge-active" if active else "badge-soon"
-        badge_text  = "Active" if active else "Coming Soon"
+    st.markdown("### 🏆 Scorecard Modules")
+    for icon, name, desc, url_path in SCORECARD_MODULES:
         st.markdown(
             f"""
-<div class="{row_class}">
+<div class="module-row active">
   <div class="module-icon">{icon}</div>
-  <div>
-    <span class="module-name">{name}</span>
-    <span class="{badge_class}">{badge_text}</span>
-    <div class="module-desc">{desc}</div>
+  <div style="flex: 1;">
+    <a href="/{url_path}" style="text-decoration: none; color: inherit;">
+      <span class="module-name">{name}</span>
+      <span class="badge-active">Active</span>
+      <div class="module-desc">{desc}</div>
+    </a>
   </div>
 </div>""",
             unsafe_allow_html=True,
@@ -156,14 +150,15 @@ with col_modules:
 with col_guide:
     st.markdown("### Quick Start")
     st.info(
-        "**Utilization %**\n\n"
-        "**1.** Open **Utilization Check-in** in the sidebar\n"
-        "**2.** Upload your Clockify Detailed Report CSV\n"
-        "**3.** Confirm the auto-detected week label\n"
-        "**4.** Open **Utilization Dashboard** to review metrics\n\n"
+        "**📝 L10 Weekly Scorecard Entry**\n\n"
+        "**1.** Select the week to enter data\n"
+        "**2.** Fill in metrics for each area (BD, Health, Financial, etc.)\n"
+        "**3.** Add context hints for AI Adoption metric\n"
+        "**4.** Click **Save Scorecard Entry**\n\n"
         "---\n\n"
-        "**Operational Health**\n\n"
-        "**1.** Add projects in **Project Management**\n"
-        "**2.** PMs submit check-ins in **Weekly Check-in**\n"
-        "**3.** Open **Operational Health** during L10"
+        "**🏆 L10 Scorecard**\n\n"
+        "**1.** View all 10 metrics in one dashboard\n"
+        "**2.** Compare week-over-week trends\n"
+        "**3.** See owner assignments and status\n"
+        "**4.** Review color-coded sections for each area"
     )
