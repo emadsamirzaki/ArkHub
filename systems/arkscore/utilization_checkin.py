@@ -122,24 +122,6 @@ def main() -> None:
         st.session_state["util_selected_week"] = week_label
         st.switch_page("systems/arkscore/utilization_dashboard.py")
 
-    else:
-        st.markdown("---")
-        st.markdown("**Expected CSV format — key columns:**")
-        sample = pd.DataFrame({
-            "Project":            ["Website Redesign", "Internal Meeting", "API Development"],
-            "Client":             ["Acme Corp", "",          "TechCorp"],
-            "Description":        ["Homepage layout", "Weekly sync", "Auth endpoint"],
-            "User":               ["Alice", "Bob",    "Alice"],
-            "Billable":           ["Yes",   "No",     "Yes"],
-            "Start Date":         ["04/28/2026", "04/28/2026", "04/29/2026"],
-            "Duration (decimal)": [2.50, 1.00, 3.25],
-        })
-        st.dataframe(sample, use_container_width=True, hide_index=True)
-        st.caption(
-            "The full Clockify export includes additional columns. "
-            "Only the above columns are used for utilization calculations."
-        )
-
     # ── Saved weeks table ──────────────────────────────────────────────────────
     st.markdown('<p class="section-heading">Saved Weeks</p>', unsafe_allow_html=True)
 
