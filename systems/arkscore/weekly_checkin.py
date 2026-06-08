@@ -5,7 +5,7 @@ PM input form — submit or update weekly project health check-ins.
 
 from __future__ import annotations
 
-from datetime import date as _date
+from datetime import date as _date, timedelta
 
 import streamlit as st
 
@@ -87,9 +87,10 @@ def main() -> None:
 
     col_wk, col_lbl, _ = st.columns([2, 4, 2])
     with col_wk:
+        last_week = _date.today() - timedelta(days=7)
         picked = st.date_input(
             "Pick any day in the week",
-            value=_date.today(),
+            value=last_week,
             help="Select any day — the full Sun–Thu week will be used.",
         )
     week_label = week_label_from_date(picked)
