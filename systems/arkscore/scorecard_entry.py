@@ -278,24 +278,78 @@ with st.form("scorecard_entry_form"):
 
     # Operations (auto, but editable) ───────────────────────────────────────────
     with st.expander("⚙️ Operations", expanded=False):
-        st.markdown(f'**#9 · Utilization %** <span class="sc-auto-badge">Auto</span>', unsafe_allow_html=True)
+        st.markdown(f'**#9 · Team Utilization & Billable** <span class="sc-auto-badge">Auto</span>', unsafe_allow_html=True)
 
-        default_util = utilization_pct
-        if default_util is None and "utilization_pct" in d:
-            default_util = float(d.get("utilization_pct", 0) or 0)
-        elif default_util is None:
-            default_util = 0.0
+        # Calculate both metrics from utilization report (raw Clockify data)
+        team_util = None
+        total_bill = None
+        if report and report.get("raw_rows"):
+            per_user = {}
+            for row in report["raw_rows"]:
+                user = row.get("User", "")
+                duration = float(row.get("Duration (decimal)", 0))
+                billable = row.get("Billable", "").strip().lower() == "yes"
 
-        utilization_pct_input = st.number_input(
-            "Utilization %",
-            min_value=0.0,
-            max_value=100.0,
-            step=0.1,
-            value=default_util,
-            label_visibility="collapsed"
-        )
+                if user not in per_user:
+                    per_user[user] = {"total": 0, "billable": 0}
+                per_user[user]["total"] += duration
+                if billable:
+                    per_user[user]["billable"] += duration
 
-        if utilization_pct is not None:
+            if per_user:
+                utilizations = []
+                billables = []
+                for data in per_user.values():
+                    total = data["total"]
+                    bill = data["billable"]
+                    util_pct = (total / 35.0 * 100) if total > 0 else 0
+                    bill_pct = (bill / total * 100) if total > 0 else 0
+                    utilizations.append(util_pct)
+                    billables.append(bill_pct)
+
+                if utilizations:
+                    team_util = round(sum(utilizations) / len(utilizations), 1)
+                if billables:
+                    total_bill = round(sum(billables) / len(billables), 1)
+
+        # Team Utilization input
+        default_team_util = team_util
+        if default_team_util is None and "team_utilization_pct" in d:
+            default_team_util = float(d.get("team_utilization_pct", 0) or 0)
+        elif default_team_util is None:
+            default_team_util = 0.0
+
+        col_util, col_bill = st.columns(2)
+        with col_util:
+            st.markdown("**Team Utilization %**")
+            team_util_input = st.number_input(
+                "Team Utilization %",
+                min_value=0.0,
+                max_value=200.0,
+                step=0.1,
+                value=default_team_util,
+                label_visibility="collapsed"
+            )
+
+        # Total Billable input
+        default_total_bill = total_bill
+        if default_total_bill is None and "total_billable_pct" in d:
+            default_total_bill = float(d.get("total_billable_pct", 0) or 0)
+        elif default_total_bill is None:
+            default_total_bill = 0.0
+
+        with col_bill:
+            st.markdown("**Total Billable %**")
+            total_bill_input = st.number_input(
+                "Total Billable %",
+                min_value=0.0,
+                max_value=100.0,
+                step=0.1,
+                value=default_total_bill,
+                label_visibility="collapsed"
+            )
+
+        if team_util is not None or total_bill is not None:
             st.caption(f"📊 From Clockify data for this week")
         else:
             st.caption(f"⚠️  No utilization report for this week — auto-calculate by uploading via Utilization Check-in first")
@@ -348,7 +402,8 @@ if submitted:
         "red_flags_5":        red_flags_5,
         "red_flags_4":        red_flags_4,
         "process_violations": process_violations,
-        "utilization_pct":    utilization_pct_input,
+        "team_utilization_pct": team_util_input,
+        "total_billable_pct":   total_bill_input,
         "ai_adoption_pct":    ai_adoption_pct,
         "ai_adoption_hint":   ai_adoption_hint.strip() or None,
     }

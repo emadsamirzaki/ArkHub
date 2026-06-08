@@ -162,6 +162,7 @@ st.markdown(f"""
     font-weight: 700;
     font-size: 1.15rem;
     color: #3B82F6;
+    line-height: 1.5;
 }}
 
 .sc-target {{
@@ -288,18 +289,42 @@ if client_health_pct is None and "client_health_pct" in d:
 
 # Auto: Utilization (#9)
 report = get_report(selected_week)
-utilization_pct = None
-if report:
-    per_user: dict[str, float] = {}
+team_utilization_pct = None
+total_billable_pct = None
+if report and report.get("raw_rows"):
+    per_user = {}
     for row in report["raw_rows"]:
-        name = row.get("User", "")
-        per_user[name] = per_user.get(name, 0) + float(row.get("Duration (decimal)", 0))
-    if per_user:
-        utilization_pct = round(sum(h / 35.0 * 100 for h in per_user.values()) / len(per_user), 1)
+        user = row.get("User", "")
+        duration = float(row.get("Duration (decimal)", 0))
+        billable = row.get("Billable", "").strip().lower() == "yes"
 
-# Use manually entered value if auto calculation is unavailable
-if utilization_pct is None and "utilization_pct" in d:
-    utilization_pct = d.get("utilization_pct")
+        if user not in per_user:
+            per_user[user] = {"total": 0, "billable": 0}
+        per_user[user]["total"] += duration
+        if billable:
+            per_user[user]["billable"] += duration
+
+    if per_user:
+        utilizations = []
+        billables = []
+        for data in per_user.values():
+            total = data["total"]
+            bill = data["billable"]
+            util_pct = (total / 35.0 * 100) if total > 0 else 0
+            bill_pct = (bill / total * 100) if total > 0 else 0
+            utilizations.append(util_pct)
+            billables.append(bill_pct)
+
+        if utilizations:
+            team_utilization_pct = round(sum(utilizations) / len(utilizations), 1)
+        if billables:
+            total_billable_pct = round(sum(billables) / len(billables), 1)
+
+# Use manually entered values if auto calculation is unavailable
+if team_utilization_pct is None and "team_utilization_pct" in d:
+    team_utilization_pct = d.get("team_utilization_pct")
+if total_billable_pct is None and "total_billable_pct" in d:
+    total_billable_pct = d.get("total_billable_pct")
 
 # ── Metric owners ──────────────────────────────────────────────────────────────
 METRIC_OWNERS = {
@@ -616,12 +641,12 @@ table_html = f"""
          _met_lt("process_violations", 5))}
     {section_row("⚙️ Operations", "sc-section-ops")}
     {row(9, "Operations",
-         'Utilization % <span class="badge-auto">Auto</span>',
-         "Billable hours as % of target hours (Clockify)",
-         _fmt(utilization_pct, suffix="%"),
+         'Team Utilization & Billable <span class="badge-auto">Auto</span>',
+         "Team Utilization % and Billable % (from Clockify)",
+         f'● Team Util: {_fmt(team_utilization_pct, suffix="%")}<br/>● Billable: {_fmt(total_billable_pct, suffix="%")}',
          "≥65%",
          METRIC_OWNERS[9],
-         _auto_met(utilization_pct, ">=", 65))}
+         _auto_met(total_billable_pct, ">=", 65))}
     {section_row("🤖 AI &amp; Delivery", "sc-section-ai")}
     {row(10, "AI &amp; Delivery",
          "AI Transformation — Projects Adoption",
