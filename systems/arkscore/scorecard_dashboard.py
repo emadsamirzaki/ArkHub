@@ -660,6 +660,12 @@ table_html = f"""
          prev_val=prev_data.get("ai_adoption_pct") if prev_data else None)}
   </tbody>
 </table>
+
+<div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #334155; text-align: right;">
+  <a href="/scorecard_entry" style="color: #60A5FA; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: all 0.2s ease;">
+    ✏️ Edit this week →
+  </a>
+</div>
 </div>
 """
 
