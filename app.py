@@ -55,10 +55,10 @@ pg = st.navigation(
             st.Page("systems/arkscore/utilization_checkin.py",     title="Utilization Check-in",  icon="📤"),
             st.Page("systems/arkscore/operational_health.py",      title="Operational Health",    icon="🟢"),
             st.Page("systems/arkscore/weekly_checkin.py",          title="Projects Weekly Check-in", icon="✍️"),
-            st.Page("systems/arkscore/project_management.py",      title="Project Management",    icon="⚙️"),
         ],
         "Company Management": [
             st.Page("systems/people/employees.py",        title="Employees",        icon="👥"),
+            st.Page("systems/arkscore/project_management.py", title="Project Management", icon="⚙️"),
             st.Page("systems/people/working_patterns.py", title="Working Patterns", icon="🗓️"),
             st.Page("systems/people/availability.py",     title="Availability Now", icon="📍", url_path="availability"),
         ],
@@ -88,19 +88,20 @@ with st.sidebar:
         st.markdown('<span class="sidebar-section-label">Operational Health</span>', unsafe_allow_html=True)
         st.page_link("systems/arkscore/operational_health.py",  label="Operational Health", icon="🟢")
         st.page_link("systems/arkscore/weekly_checkin.py",      label="Projects Weekly Check-in", icon="✍️")
-        st.page_link("systems/arkscore/project_management.py",  label="Project Management", icon="⚙️")
-
-    st.markdown('<span class="sidebar-top-label">Workforce</span>', unsafe_allow_html=True)
-    with st.expander("📍 Workforce", expanded=False):
-        st.page_link("systems/people/working_patterns.py", label="Working Patterns", icon="🗓️")
-        st.page_link("systems/people/availability.py",     label="Availability Now", icon="📍")
 
     st.markdown('<span class="sidebar-top-label">Company Management</span>', unsafe_allow_html=True)
-    st.page_link("systems/people/employees.py", label="Employees", icon="👥")
+    with st.expander("🏢 Company Management", expanded=False):
+        st.page_link("systems/people/employees.py",            label="Employees", icon="👥")
+        st.page_link("systems/arkscore/project_management.py", label="Project Management", icon="⚙️")
 
     st.markdown('<span class="sidebar-top-label">Projects Hours Tracking</span>', unsafe_allow_html=True)
     with st.expander("⏱️ Projects Hours Tracking", expanded=False):
         st.page_link("systems/project_hours/home.py", label="Overview", icon="📋")
         st.page_link("systems/project_hours/hours_tracking.py", label="Hours Tracking", icon="⏱️")
+
+    st.markdown('<span class="sidebar-top-label">Workforce</span>', unsafe_allow_html=True)
+    with st.expander("📍 Workforce", expanded=False):
+        st.page_link("systems/people/working_patterns.py", label="Working Patterns", icon="🗓️")
+        st.page_link("systems/people/availability.py",     label="Availability Now", icon="📍")
 
 pg.run()
