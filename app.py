@@ -62,6 +62,10 @@ pg = st.navigation(
             st.Page("systems/people/working_patterns.py", title="Working Patterns", icon="🗓️"),
             st.Page("systems/people/availability.py",     title="Availability Now", icon="📍", url_path="availability"),
         ],
+        "Projects Hours Tracking": [
+            st.Page("systems/project_hours/home.py",          title="Overview",       icon="📋", url_path="project_hours"),
+            st.Page("systems/project_hours/hours_tracking.py", title="Hours Tracking", icon="⏱️"),
+        ],
     }
 )
 
@@ -93,5 +97,10 @@ with st.sidebar:
 
     st.markdown('<span class="sidebar-top-label">Company Management</span>', unsafe_allow_html=True)
     st.page_link("systems/people/employees.py", label="Employees", icon="👥")
+
+    st.markdown('<span class="sidebar-top-label">Projects Hours Tracking</span>', unsafe_allow_html=True)
+    with st.expander("⏱️ Projects Hours Tracking", expanded=False):
+        st.page_link("systems/project_hours/home.py", label="Overview", icon="📋")
+        st.page_link("systems/project_hours/hours_tracking.py", label="Hours Tracking", icon="⏱️")
 
 pg.run()

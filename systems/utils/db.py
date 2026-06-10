@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS projects (
     created_at TEXT NOT NULL
 );
 
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS retainer BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE TABLE IF NOT EXISTS entries (
     id            TEXT PRIMARY KEY,
     project_id    TEXT NOT NULL,
@@ -64,6 +66,17 @@ CREATE TABLE IF NOT EXISTS scorecard_entries (
     data         JSONB NOT NULL,
     submitted_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS project_contracts (
+    project_id    TEXT PRIMARY KEY,
+    from_date     TEXT NOT NULL,
+    to_date       TEXT NOT NULL,
+    total_hours   NUMERIC NOT NULL,
+    monthly_hours JSONB NOT NULL DEFAULT '{}',
+    updated_at    TEXT NOT NULL
+);
+
+ALTER TABLE project_contracts ADD COLUMN IF NOT EXISTS clockify_project_id TEXT;
 """
 
 

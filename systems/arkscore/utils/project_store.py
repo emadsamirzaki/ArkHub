@@ -14,7 +14,7 @@ from systems.utils.db import db_cursor
 def load_projects() -> list[dict]:
     with db_cursor() as cur:
         cur.execute(
-            "SELECT id, name, pm, status, created_at FROM projects ORDER BY created_at"
+            "SELECT id, name, pm, status, created_at, retainer FROM projects ORDER BY created_at"
         )
         return [dict(row) for row in cur.fetchall()]
 
@@ -24,8 +24,10 @@ def save_projects(projects: list[dict]) -> None:
         cur.execute("DELETE FROM projects")
         for p in projects:
             cur.execute(
-                "INSERT INTO projects (id, name, pm, status, created_at) VALUES (%s,%s,%s,%s,%s)",
-                (p["id"], p["name"], p["pm"], p["status"], p["created_at"]),
+                "INSERT INTO projects (id, name, pm, status, created_at, retainer)"
+                " VALUES (%s,%s,%s,%s,%s,%s)",
+                (p["id"], p["name"], p["pm"], p["status"], p["created_at"],
+                 p.get("retainer", False)),
             )
 
 
@@ -33,7 +35,11 @@ def get_active_projects() -> list[dict]:
     return [p for p in load_projects() if p.get("status") == "Active"]
 
 
-def add_project(name: str, pm: str, status: str = "Active") -> dict:
+def get_retainer_projects() -> list[dict]:
+    return [p for p in load_projects() if p.get("retainer")]
+
+
+def add_project(name: str, pm: str, status: str = "Active", retainer: bool = False) -> dict:
     projects = load_projects()
     project: dict = {
         "id":         str(uuid.uuid4()),
@@ -41,6 +47,7 @@ def add_project(name: str, pm: str, status: str = "Active") -> dict:
         "pm":         pm.strip(),
         "status":     status,
         "created_at": date.today().isoformat(),
+        "retainer":   retainer,
     }
     projects.append(project)
     save_projects(projects)
