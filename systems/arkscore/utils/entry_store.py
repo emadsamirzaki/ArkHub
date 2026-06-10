@@ -8,9 +8,12 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timedelta
 
+import streamlit as st
+
 from systems.utils.db import db_cursor
 
 
+@st.cache_data(ttl=60)
 def load_entries() -> list[dict]:
     with db_cursor() as cur:
         cur.execute(
@@ -31,6 +34,7 @@ def save_entries(entries: list[dict]) -> None:
                 (e["id"], e["project_id"], e["week_label"], e["health_status"],
                  e.get("note_type"), e.get("note_text"), e["submitted_at"]),
             )
+    load_entries.clear()
 
 
 def get_entry(project_id: str, week_label: str) -> dict | None:

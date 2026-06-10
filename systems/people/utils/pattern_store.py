@@ -9,12 +9,14 @@ import json
 from datetime import datetime
 
 import psycopg2.extras
+import streamlit as st
 
 from systems.utils.db import db_cursor
 
 DAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday"]
 
 
+@st.cache_data(ttl=60)
 def load_patterns() -> dict:
     with db_cursor() as cur:
         cur.execute("SELECT employee_id, patterns, updated_at FROM working_patterns")
@@ -40,6 +42,7 @@ def save_patterns(data: dict) -> None:
                 "INSERT INTO working_patterns (employee_id, patterns, updated_at) VALUES (%s,%s,%s)",
                 (emp_id, psycopg2.extras.Json(record["patterns"]), record["updated_at"]),
             )
+    load_patterns.clear()
 
 
 def get_pattern(emp_id: str) -> dict | None:

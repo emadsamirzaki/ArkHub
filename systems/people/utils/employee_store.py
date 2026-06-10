@@ -8,9 +8,12 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
+import streamlit as st
+
 from systems.utils.db import db_cursor
 
 
+@st.cache_data(ttl=60)
 def load_employees() -> list[dict]:
     with db_cursor() as cur:
         cur.execute(
@@ -29,6 +32,7 @@ def save_employees(employees: list[dict]) -> None:
                 (e["id"], e["name"], e["email"], e.get("mobile", ""),
                  e["role"], e["status"], e["created_at"]),
             )
+    load_employees.clear()
 
 
 def get_all_roles() -> list[str]:

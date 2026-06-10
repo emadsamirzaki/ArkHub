@@ -9,10 +9,12 @@ import uuid
 from datetime import datetime
 
 import psycopg2.extras
+import streamlit as st
 
 from systems.utils.db import db_cursor
 
 
+@st.cache_data(ttl=60)
 def get_entry(week_label: str) -> dict | None:
     with db_cursor() as cur:
         cur.execute(
@@ -44,9 +46,12 @@ def upsert_entry(week_label: str, data: dict) -> dict:
             (entry_id, week_label, psycopg2.extras.Json(data), submitted_at),
         )
         actual_id = cur.fetchone()["id"]
+    get_entry.clear()
+    get_all_weeks.clear()
     return {"id": actual_id, "week_label": week_label, "data": data, "submitted_at": submitted_at}
 
 
+@st.cache_data(ttl=60)
 def get_all_weeks() -> list[str]:
     with db_cursor() as cur:
         cur.execute("SELECT week_label FROM scorecard_entries ORDER BY week_label DESC")

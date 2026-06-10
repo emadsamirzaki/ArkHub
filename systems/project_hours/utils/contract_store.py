@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 
 import psycopg2.extras
+import streamlit as st
 
 from systems.utils.db import db_cursor
 
@@ -29,6 +30,7 @@ def _row_to_dict(row: dict | None) -> dict | None:
     return r
 
 
+@st.cache_data(ttl=60)
 def get_contract(project_id: str) -> dict | None:
     with db_cursor() as cur:
         cur.execute(
@@ -38,6 +40,7 @@ def get_contract(project_id: str) -> dict | None:
         return _row_to_dict(cur.fetchone())
 
 
+@st.cache_data(ttl=60)
 def get_all_contracts() -> list[dict]:
     with db_cursor() as cur:
         cur.execute(f"SELECT {_COLUMNS} FROM project_contracts")
@@ -76,6 +79,8 @@ def upsert_contract(
             (project_id, from_date, to_date, float(total_hours),
              psycopg2.extras.Json(monthly_hours), updated_at, clockify_project_id),
         )
+    get_contract.clear()
+    get_all_contracts.clear()
     return {
         "project_id":          project_id,
         "from_date":           from_date,
@@ -93,4 +98,8 @@ def delete_contract(project_id: str) -> bool:
             "DELETE FROM project_contracts WHERE project_id = %s RETURNING project_id",
             (project_id,),
         )
-        return cur.fetchone() is not None
+        deleted = cur.fetchone() is not None
+    if deleted:
+        get_contract.clear()
+        get_all_contracts.clear()
+    return deleted

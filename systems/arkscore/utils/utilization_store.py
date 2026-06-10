@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime
 
 import psycopg2.extras
+import streamlit as st
 
 from systems.utils.db import db_cursor
 
@@ -37,6 +38,7 @@ def _row_to_dict(row: dict) -> dict:
     return r
 
 
+@st.cache_data(ttl=60)
 def get_all_reports() -> list[dict]:
     with db_cursor() as cur:
         cur.execute(
@@ -50,6 +52,7 @@ def get_all_week_labels() -> list[str]:
     return [r["week_label"] for r in get_all_reports()]
 
 
+@st.cache_data(ttl=60)
 def get_report(week_label: str) -> dict | None:
     with db_cursor() as cur:
         cur.execute(
@@ -85,6 +88,8 @@ def upsert_report(
              uploaded_at, psycopg2.extras.Json(safe_rows)),
         )
         actual_id = cur.fetchone()["id"]
+    get_all_reports.clear()
+    get_report.clear()
     return {
         "id":          actual_id,
         "week_label":  week_label,
@@ -101,7 +106,11 @@ def delete_report(week_label: str) -> bool:
             "DELETE FROM utilization_reports WHERE week_label = %s RETURNING id",
             (week_label,),
         )
-        return cur.fetchone() is not None
+        deleted = cur.fetchone() is not None
+    if deleted:
+        get_all_reports.clear()
+        get_report.clear()
+    return deleted
 
 
 def report_exists(week_label: str) -> bool:

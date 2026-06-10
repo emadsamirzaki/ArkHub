@@ -7,6 +7,7 @@ Works with Clockify "Detailed Report" CSV exports.
 from __future__ import annotations
 
 import pandas as pd
+import streamlit as st
 
 from .constants import (
     ON_TARGET_THRESHOLD,
@@ -58,6 +59,7 @@ def get_week_label(df: pd.DataFrame) -> str:
     return f"Week of {start_str} – {end_str}"
 
 
+@st.cache_data
 def calculate_utilization(df: pd.DataFrame) -> pd.DataFrame:
     rows: list[dict] = []
     for user, grp in df.groupby("User"):
@@ -96,6 +98,7 @@ def calculate_utilization(df: pd.DataFrame) -> pd.DataFrame:
     return result
 
 
+@st.cache_data
 def get_project_breakdown(df: pd.DataFrame) -> dict[str, dict]:
     breakdown: dict[str, dict] = {}
     for user, u_grp in df.groupby("User"):

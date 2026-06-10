@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from datetime import date
 
+import streamlit as st
+
 from systems.project_hours.utils.constants import (
     STATUS_ABOVE,
     STATUS_BELOW,
@@ -60,6 +62,7 @@ def _classify(actual: float, expected: float) -> str:
     return STATUS_IN_RANGE
 
 
+@st.cache_data(ttl=300)
 def summarize(contract: dict, today: date | None = None) -> dict:
     """
     Compute pace metrics for a contract.

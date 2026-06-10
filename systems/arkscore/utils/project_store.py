@@ -8,9 +8,12 @@ from __future__ import annotations
 import uuid
 from datetime import date
 
+import streamlit as st
+
 from systems.utils.db import db_cursor
 
 
+@st.cache_data(ttl=60)
 def load_projects() -> list[dict]:
     with db_cursor() as cur:
         cur.execute(
@@ -29,6 +32,7 @@ def save_projects(projects: list[dict]) -> None:
                 (p["id"], p["name"], p["pm"], p["status"], p["created_at"],
                  p.get("retainer", False)),
             )
+    load_projects.clear()
 
 
 def get_active_projects() -> list[dict]:
