@@ -150,18 +150,14 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-        cur_status = st.session_state.get(f"ci_status_{pid}", STATUS_OPTIONS[0])
         c3.selectbox(
             "status", STATUS_OPTIONS,
-            index=STATUS_OPTIONS.index(cur_status) if cur_status in STATUS_OPTIONS else 0,
             key=f"ci_status_{pid}",
             label_visibility="collapsed",
         )
 
-        cur_ntype = st.session_state.get(f"ci_note_type_{pid}", "—")
         c4.selectbox(
             "note type", NOTE_OPTIONS,
-            index=NOTE_OPTIONS.index(cur_ntype) if cur_ntype in NOTE_OPTIONS else 0,
             key=f"ci_note_type_{pid}",
             label_visibility="collapsed",
         )
