@@ -56,3 +56,10 @@ def get_all_weeks() -> list[str]:
     with db_cursor() as cur:
         cur.execute("SELECT week_label FROM scorecard_entries ORDER BY week_label DESC")
         return [row["week_label"] for row in cur.fetchall()]
+
+
+def delete_entry(week_label: str) -> None:
+    with db_cursor() as cur:
+        cur.execute("DELETE FROM scorecard_entries WHERE week_label = %s", (week_label,))
+    get_entry.clear()
+    get_all_weeks.clear()

@@ -13,7 +13,7 @@ from systems.arkscore.utils.entry_store import (
     week_label_from_date,
 )
 from systems.arkscore.utils.project_store import load_projects
-from systems.arkscore.utils.scorecard_store import get_entry, upsert_entry
+from systems.arkscore.utils.scorecard_store import delete_entry, get_all_weeks, get_entry, upsert_entry
 from systems.arkscore.utils.utilization_store import get_report
 from systems.arkscore.utils.constants import (
     COLOR_BG, COLOR_CARD, COLOR_BORDER, COLOR_TEXT, COLOR_MUTED,
@@ -409,3 +409,55 @@ if submitted:
     }
     upsert_entry(week_label, payload)
     st.success(f"Saved scorecard for **{week_label}**")
+
+# ── Saved Weeks ───────────────────────────────────────────────────────────────
+st.markdown("""
+<style>
+.sc-saved-hdr {
+    font-size: .75rem; font-weight: 700; color: #94A3B8;
+    margin: 36px 0 14px; padding-bottom: 8px;
+    border-bottom: 1px solid #334155;
+    text-transform: uppercase; letter-spacing: .1em;
+}
+</style>
+<p class="sc-saved-hdr">Saved Weeks</p>
+""", unsafe_allow_html=True)
+
+saved_weeks = get_all_weeks()
+if not saved_weeks:
+    st.info("No scorecard entries saved yet.")
+else:
+    sh1, sh2, sh3 = st.columns([4, 3, 1])
+    sh1.markdown("**Week**")
+    sh2.markdown("**Submitted At**")
+    sh3.markdown("")
+    st.markdown("<hr style='margin:4px 0 8px 0;border-color:#334155'>", unsafe_allow_html=True)
+
+    for wk in saved_weeks:
+        sc_entry = get_entry(wk)
+        submitted_at_fmt = ""
+        if sc_entry:
+            try:
+                submitted_at_fmt = datetime.datetime.fromisoformat(
+                    sc_entry["submitted_at"]
+                ).strftime("%d %b %Y %H:%M")
+            except Exception:
+                submitted_at_fmt = sc_entry.get("submitted_at", "")
+
+        wc1, wc2, wc3 = st.columns([4, 3, 1])
+        wc1.markdown(wk)
+        wc2.markdown(submitted_at_fmt)
+        if wc3.button("Delete", key=f"del_sc_{wk}", use_container_width=True):
+            st.session_state[f"confirm_del_sc_{wk}"] = True
+
+        if st.session_state.get(f"confirm_del_sc_{wk}"):
+            st.warning(f"Delete scorecard entry for **{wk}**? This cannot be undone.")
+            ok_col, cancel_col, _ = st.columns([1, 1, 4])
+            if ok_col.button("Yes, delete", key=f"yes_del_sc_{wk}", type="primary"):
+                delete_entry(wk)
+                st.session_state.pop(f"confirm_del_sc_{wk}", None)
+                st.success(f"Deleted scorecard for {wk}.")
+                st.rerun()
+            if cancel_col.button("Cancel", key=f"cancel_del_sc_{wk}"):
+                st.session_state.pop(f"confirm_del_sc_{wk}", None)
+                st.rerun()

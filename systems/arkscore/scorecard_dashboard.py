@@ -247,19 +247,13 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-all_weeks = sorted(
-    set(get_all_weeks()) | set(get_entry_weeks()) | set(get_all_week_labels()),
-    reverse=True,
-)
-cur_week = current_week_label()
-if not all_weeks:
-    all_weeks = [cur_week]
-if cur_week not in all_weeks:
-    all_weeks.insert(0, cur_week)
+all_weeks = get_all_weeks()  # only weeks with saved scorecard entries, sorted DESC
 
-# Default to last week (index 1) if available, otherwise current week (index 0)
-default_idx = 1 if len(all_weeks) > 1 else 0
-selected_week = st.selectbox("Week", all_weeks, index=default_idx, label_visibility="collapsed")
+if not all_weeks:
+    st.info("No scorecard entries saved yet. Use **L10 Scorecard Entry** to add the first week.")
+    st.stop()
+
+selected_week = st.selectbox("Week", all_weeks, index=0, label_visibility="collapsed")
 
 # ── Load data for selected week ────────────────────────────────────────────────
 entry = get_entry(selected_week)
