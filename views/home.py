@@ -80,33 +80,47 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 .system-card.active {
     border-color: #3B82F6;
     background: linear-gradient(135deg, #172554 0%, #1e1b4b 100%);
-    cursor: pointer;
-}
-.system-card.active:hover {
-    border-color: #60A5FA;
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(59,130,246,0.25);
 }
 .system-card-icon  { font-size: 2rem; margin-bottom: 10px; }
 .system-card-name  { font-size: 1.05rem; font-weight: 700; color: #F1F5F9; margin: 0 0 4px 0; }
-.system-card-desc  { font-size: 0.82rem; color: #64748B; margin: 0 0 14px 0; line-height: 1.5; }
+.system-card-name a {
+    color: #F1F5F9; text-decoration: none;
+    transition: color 0.15s;
+}
+.system-card-name a:hover { color: #93C5FD; }
+.system-card-desc  { font-size: 0.82rem; color: #64748B; margin: 0 0 12px 0; line-height: 1.5; }
+.module-links {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin: 0 0 14px 0;
+}
+.module-link {
+    display: inline-block;
+    background: rgba(59,130,246,0.1);
+    border: 1px solid rgba(59,130,246,0.22);
+    color: #93C5FD;
+    font-size: 0.72rem; font-weight: 600;
+    padding: 4px 10px; border-radius: 6px;
+    text-decoration: none;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.module-link:hover {
+    background: rgba(59,130,246,0.22);
+    border-color: rgba(96,165,250,0.5);
+    color: #BFDBFE;
+}
 .badge-active {
     display: inline-block;
     background: #1D4ED8;
     color: #BFDBFE;
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 999px;
+    font-size: 0.7rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 999px;
 }
 .badge-soon {
     display: inline-block;
     background: #334155;
     color: #94A3B8;
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 999px;
+    font-size: 0.7rem; font-weight: 700;
+    padding: 3px 10px; border-radius: 999px;
 }
 </style>
 """,
@@ -139,13 +153,27 @@ SYSTEMS = [
         "desc":   "EOS L10 weekly scorecard — utilization, operational health, and project tracking.",
         "active": True,
         "url":    "/arkscore",
+        "modules": [
+            {"icon": "🏆", "label": "L10 Scorecard",         "url": "/scorecard"},
+            {"icon": "📝", "label": "Scorecard Entry",        "url": "/scorecard_entry"},
+            {"icon": "📊", "label": "Utilization Dashboard",  "url": "/utilization_dashboard"},
+            {"icon": "📤", "label": "Utilization Check-in",   "url": "/utilization_checkin"},
+            {"icon": "🟢", "label": "Operational Health",     "url": "/operational_health"},
+            {"icon": "✍️", "label": "Projects Check-in",      "url": "/weekly_checkin"},
+        ],
     },
     {
         "icon":   "🏢",
         "name":   "Company Management",
         "desc":   "Employee directory, project management, working patterns, and live availability.",
         "active": True,
-        "url":    "/availability",
+        "url":    "/employees",
+        "modules": [
+            {"icon": "👥", "label": "Employees",          "url": "/employees"},
+            {"icon": "⚙️", "label": "Project Management", "url": "/project_management"},
+            {"icon": "🗓️", "label": "Working Patterns",   "url": "/working_patterns"},
+            {"icon": "📍", "label": "Availability Now",   "url": "/availability"},
+        ],
     },
     {
         "icon":   "⏱️",
@@ -153,6 +181,10 @@ SYSTEMS = [
         "desc":   "Track billable hours per project across the team with Clockify sync and reporting.",
         "active": True,
         "url":    "/project_hours",
+        "modules": [
+            {"icon": "📋", "label": "Overview",       "url": "/project_hours"},
+            {"icon": "⏱️", "label": "Hours Tracking", "url": "/hours_tracking"},
+        ],
     },
     {
         "icon":   "👥",
@@ -176,24 +208,39 @@ SYSTEMS = [
 
 cards_html = '<div class="system-grid">'
 for s in SYSTEMS:
-    card_class  = "system-card active" if s["active"] else "system-card"
-    badge_class = "badge-active" if s["active"] else "badge-soon"
-    badge_text  = "Active" if s["active"] else "Coming Soon"
-    inner = f"""
-  <div class="system-card-icon">{s['icon']}</div>
-  <p class="system-card-name">{s['name']}</p>
-  <p class="system-card-desc">{s['desc']}</p>
-  <span class="{badge_class}">{badge_text}</span>"""
-    if s.get("url"):
-        cards_html += f'<a href="{s["url"]}" class="{card_class}" target="_self">{inner}</a>'
-    else:
-        cards_html += f'<div class="{card_class}">{inner}</div>'
+    is_active   = s["active"]
+    card_class  = "system-card active" if is_active else "system-card"
+    badge_class = "badge-active" if is_active else "badge-soon"
+    badge_text  = "Active" if is_active else "Coming Soon"
+    modules     = s.get("modules", [])
+
+    name_html = (
+        f'<a href="{s["url"]}" target="_self">{s["name"]}</a>'
+        if is_active and s.get("url") else s["name"]
+    )
+
+    module_html = ""
+    if modules:
+        links = "".join(
+            f'<a href="{m["url"]}" class="module-link" target="_self">{m["icon"]} {m["label"]}</a>'
+            for m in modules
+        )
+        module_html = f'<div class="module-links">{links}</div>'
+
+    inner = (
+        f'<div class="system-card-icon">{s["icon"]}</div>'
+        f'<p class="system-card-name">{name_html}</p>'
+        f'<p class="system-card-desc">{s["desc"]}</p>'
+        f'{module_html}'
+        f'<span class="{badge_class}">{badge_text}</span>'
+    )
+    cards_html += f'<div class="{card_class}">{inner}</div>'
 cards_html += "</div>"
 
 st.markdown(cards_html, unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown(
-    "<p style='font-size:0.8rem;color:#475569;'>Click an active system card to open it, or use the sidebar to navigate.</p>",
+    "<p style='font-size:0.8rem;color:#475569;'>Click a module link or use the sidebar to navigate.</p>",
     unsafe_allow_html=True,
 )
