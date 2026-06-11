@@ -1,6 +1,6 @@
 """
 systems/arkscore/utilization_checkin.py
-Utilization % Weekly Check-in — upload a Clockify CSV to save a week's data.
+Utilization % Weekly Check-in — fetch a week's data from Clockify API.
 """
 
 from __future__ import annotations
@@ -10,14 +10,19 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 import streamlit as st
 
-from systems.arkscore.utils.constants import REQUIRED_COLUMNS
 from systems.arkscore.utils.entry_store import week_bounds, week_label_from_date
-from systems.arkscore.utils.parse_clockify import calculate_utilization, parse_clockify_csv
+from systems.arkscore.utils.parse_clockify import calculate_utilization, parse_clockify_api
 from systems.arkscore.utils.utilization_store import (
     delete_report,
     get_all_reports,
     report_exists,
     upsert_report,
+)
+from systems.project_hours.utils.clockify import (
+    ClockifyError,
+    fetch_detailed_entries,
+    get_active_workspace_id,
+    is_configured,
 )
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
@@ -40,12 +45,24 @@ html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+def _save_df(df: pd.DataFrame, week_label: str, sunday, thursday) -> None:
+    w_start = sunday.isoformat()
+    w_end   = thursday.isoformat()
+    df = df.drop(columns=[c for c in df.columns if c.startswith("_")], errors="ignore")
+    for col in df.select_dtypes(include=["datetime64[ns]", "datetime64[ns, UTC]", "datetimetz"]).columns:
+        df[col] = df[col].astype(str)
+    for col in df.select_dtypes(include="object").columns:
+        df[col] = df[col].apply(lambda v: str(v) if hasattr(v, "isoformat") else v)
+    raw_rows = df.to_dict(orient="records")
+    upsert_report(week_label, w_start, w_end, raw_rows)
+
+
 def main() -> None:
     st.markdown("# 📤 Utilization Weekly Check-in")
-    st.markdown("Upload a Clockify **Detailed Report** to save this week's utilization data.")
+    st.markdown("Fetch this week's time entries directly from Clockify to save utilization data.")
     st.markdown("---")
 
-    st.markdown('<p class="section-heading">Upload Report</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-heading">Fetch from Clockify</p>', unsafe_allow_html=True)
 
     col_wk, col_lbl, _ = st.columns([2, 4, 2])
     with col_wk:
@@ -64,63 +81,66 @@ def main() -> None:
             unsafe_allow_html=True,
         )
 
-    uploaded = st.file_uploader(
-        "Clockify Detailed Report (.csv)",
-        type=["csv"],
-        label_visibility="visible",
-    )
+    # ── Clockify API fetch ────────────────────────────────────────────────────
+    if not is_configured():
+        st.error("⚠️ Clockify API key not configured. Add `CLOCKIFY_API_KEY` to `.streamlit/secrets.toml`.")
+        return
 
-    if uploaded is not None:
+    fetch_key = f"util_fetched_{week_label}"
+
+    if st.button("🔄 Fetch from Clockify", type="primary"):
         try:
-            df = parse_clockify_csv(uploaded)
-        except ValueError as exc:
-            st.error(f"❌ {exc}")
-            return
-        except Exception as exc:
-            st.error(f"❌ Failed to read file: {exc}")
-            return
+            with st.spinner("Fetching entries from Clockify…"):
+                wid        = get_active_workspace_id()
+                start_iso  = f"{sunday.strftime('%Y-%m-%d')}T00:00:00.000Z"
+                end_iso    = f"{thursday.strftime('%Y-%m-%d')}T23:59:59.999Z"
+                entries    = fetch_detailed_entries(wid, start_iso, end_iso)
+                df_fetched = parse_clockify_api(entries)
+            st.session_state[fetch_key] = df_fetched.to_dict(orient="records")
+        except ClockifyError as exc:
+            st.error(f"❌ Clockify error: {exc}")
+            st.session_state.pop(fetch_key, None)
 
-        util_preview = calculate_utilization(df)
-        total_hrs    = float(df["Duration (decimal)"].sum())
-        n_members    = len(util_preview)
+    # ── Preview + save (shown after a successful fetch) ───────────────────────
+    if fetch_key in st.session_state:
+        df = pd.DataFrame(st.session_state[fetch_key])
+        df["Duration (decimal)"] = pd.to_numeric(df["Duration (decimal)"], errors="coerce").fillna(0.0)
 
-        col_a, col_b, col_c = st.columns(3)
-        col_a.metric("Team Members", n_members)
-        col_b.metric("Total Hours", f"{total_hrs:.1f} h")
-        col_c.metric("Avg Utilization", f"{util_preview['Utilization %'].mean():.1f}%")
-
-        already_saved = report_exists(week_label)
-        if already_saved:
-            st.warning(
-                "⚠️ A report for this week already exists. "
-                "Uploading will **replace** the saved data."
-            )
-            col_ok, col_cancel, _ = st.columns([1, 1, 4])
-            confirm = col_ok.button("✅ Confirm & Replace", type="primary")
-            cancel  = col_cancel.button("✖ Cancel")
-            if cancel:
-                st.info("Upload cancelled.")
-                return
-            if not confirm:
-                return
+        if df.empty or "User" not in df.columns:
+            st.warning("No time entries found for this week in Clockify.")
         else:
-            if not st.button("💾 Save Report", type="primary"):
-                return
+            util_preview = calculate_utilization(df)
+            total_hrs    = float(df["Duration (decimal)"].sum())
+            n_members    = len(util_preview)
 
-        w_start = sunday.isoformat()
-        w_end   = thursday.isoformat()
+            col_a, col_b, col_c = st.columns(3)
+            col_a.metric("Team Members", n_members)
+            col_b.metric("Total Hours", f"{total_hrs:.1f} h")
+            col_c.metric("Avg Utilization", f"{util_preview['Utilization %'].mean():.1f}%")
 
-        df = df.drop(columns=[c for c in df.columns if c.startswith("_")], errors="ignore")
-        for col in df.select_dtypes(include=["datetime64[ns]", "datetime64[ns, UTC]", "datetimetz"]).columns:
-            df[col] = df[col].astype(str)
-        for col in df.select_dtypes(include="object").columns:
-            df[col] = df[col].apply(lambda v: str(v) if hasattr(v, "isoformat") else v)
-        raw_rows = df.to_dict(orient="records")
-        upsert_report(week_label, w_start, w_end, raw_rows)
+            already_saved = report_exists(week_label)
+            save_clicked = False
+            if already_saved:
+                st.warning(
+                    "⚠️ A report for this week already exists. "
+                    "Saving will **replace** the saved data."
+                )
+                col_ok, col_cancel, _ = st.columns([1, 1, 4])
+                if col_ok.button("✅ Confirm & Replace", type="primary"):
+                    save_clicked = True
+                if col_cancel.button("✖ Cancel"):
+                    st.session_state.pop(fetch_key, None)
+                    st.info("Cancelled.")
+            else:
+                if st.button("💾 Save Report", type="primary"):
+                    save_clicked = True
 
-        st.success(f"✅ Report saved for **{week_label}**.")
-        st.session_state["util_selected_week"] = week_label
-        st.switch_page("systems/arkscore/utilization_dashboard.py")
+            if save_clicked:
+                _save_df(df, week_label, sunday, thursday)
+                st.session_state.pop(fetch_key, None)
+                st.success(f"✅ Report saved for **{week_label}**.")
+                st.session_state["util_selected_week"] = week_label
+                st.switch_page("systems/arkscore/utilization_dashboard.py")
 
     # ── Saved weeks table ──────────────────────────────────────────────────────
     st.markdown('<p class="section-heading">Saved Weeks</p>', unsafe_allow_html=True)

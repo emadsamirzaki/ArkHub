@@ -141,11 +141,18 @@ SYSTEMS = [
         "url":    "/arkscore",
     },
     {
-        "icon":   "📍",
-        "name":   "Workforce",
-        "desc":   "Working patterns, live team availability, and daily schedules.",
+        "icon":   "🏢",
+        "name":   "Company Management",
+        "desc":   "Employee directory, project management, working patterns, and live availability.",
         "active": True,
         "url":    "/availability",
+    },
+    {
+        "icon":   "⏱️",
+        "name":   "Projects Hours Tracking",
+        "desc":   "Track billable hours per project across the team with Clockify sync and reporting.",
+        "active": True,
+        "url":    "/project_hours",
     },
     {
         "icon":   "👥",

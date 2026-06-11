@@ -49,6 +49,60 @@ def parse_clockify_csv(file) -> pd.DataFrame:
     return df
 
 
+def parse_clockify_api(entries: list[dict]) -> pd.DataFrame:
+    """Convert Clockify API detailed-report entries to the same DataFrame schema as parse_clockify_csv."""
+    import re
+
+    def _duration_hours(ti: dict) -> float:
+        dur = ti.get("duration") or 0
+        if isinstance(dur, (int, float)):
+            return float(dur) / 3600.0
+        m = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?", str(dur))
+        if not m:
+            return 0.0
+        return float(m.group(1) or 0) + float(m.group(2) or 0) / 60.0 + float(m.group(3) or 0) / 3600.0
+
+    _COLS = [
+        "Project", "Client", "Description", "Task", "User", "Group", "Email",
+        "Tags", "Billable", "Start Date", "Start Time", "End Date", "End Time",
+        "Duration (h)", "Duration (decimal)", "Billable Rate (EGP)",
+        "Billable Amount (EGP)", "Date of creation",
+    ]
+
+    rows = []
+    for e in entries:
+        ti        = e.get("timeInterval") or {}
+        start_dt  = pd.to_datetime(ti.get("start"), errors="coerce", utc=True)
+        end_dt    = pd.to_datetime(ti.get("end"),   errors="coerce", utc=True)
+        rows.append({
+            "Project":               e.get("projectName") or "",
+            "Client":                e.get("clientName")  or "",
+            "Description":           e.get("description") or "",
+            "Task":                  e.get("taskName")    or "",
+            "User":                  e.get("userName")    or "",
+            "Group":                 "",
+            "Email":                 e.get("userEmail")   or "",
+            "Tags":                  ", ".join(e.get("tagNames") or []),
+            "Billable":              "Yes" if e.get("billable") else "No",
+            "Start Date":            start_dt,
+            "Start Time":            start_dt.strftime("%I:%M %p") if start_dt is not pd.NaT else "",
+            "End Date":              end_dt,
+            "End Time":              end_dt.strftime("%I:%M %p")   if end_dt   is not pd.NaT else "",
+            "Duration (h)":          "",
+            "Duration (decimal)":    _duration_hours(ti),
+            "Billable Rate (EGP)":   "",
+            "Billable Amount (EGP)": "",
+            "Date of creation":      "",
+        })
+
+    if not rows:
+        return pd.DataFrame(columns=_COLS)
+
+    df = pd.DataFrame(rows)
+    df = df[df["User"].notna() & (df["User"].astype(str).str.strip() != "")].copy()
+    return df
+
+
 def get_week_label(df: pd.DataFrame) -> str:
     if "Start Date" not in df.columns or df["Start Date"].isna().all():
         return "Week of Unknown"

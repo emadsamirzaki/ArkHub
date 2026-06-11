@@ -84,7 +84,7 @@ ALTER TABLE project_contracts ADD COLUMN IF NOT EXISTS clockify_project_id TEXT;
 def _init_db() -> str:
     """Connect, create schema if needed, return URL. Runs once per Streamlit process."""
     url = st.secrets["DATABASE_URL"]
-    conn = psycopg2.connect(url)
+    conn = psycopg2.connect(url, connect_timeout=15)
     try:
         with conn.cursor() as cur:
             cur.execute(_DDL)
@@ -97,7 +97,7 @@ def _init_db() -> str:
 @contextmanager
 def db_cursor(*, dict_cursor: bool = True):
     """Yield a psycopg2 cursor in a transaction. Commits on exit, rolls back on error."""
-    conn = psycopg2.connect(_init_db())
+    conn = psycopg2.connect(_init_db(), connect_timeout=15)
     factory = psycopg2.extras.RealDictCursor if dict_cursor else None
     try:
         cur = conn.cursor(cursor_factory=factory)

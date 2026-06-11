@@ -114,6 +114,41 @@ def match_project(project_name: str, projects: list[dict]) -> str | None:
     return None
 
 
+def _parse_duration(duration) -> float:
+    """Convert a Clockify duration to decimal hours. Accepts ISO 8601 ('PT2H30M') or seconds."""
+    if not duration:
+        return 0.0
+    if isinstance(duration, (int, float)):
+        return float(duration) / 3600.0
+    import re
+    m = re.match(r"PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+(?:\.\d+)?)S)?", str(duration))
+    if not m:
+        return 0.0
+    return float(m.group(1) or 0) + float(m.group(2) or 0) / 60.0 + float(m.group(3) or 0) / 3600.0
+
+
+def fetch_detailed_entries(workspace_id: str, start_iso: str, end_iso: str) -> list[dict]:
+    """Return all time entries from the Clockify Detailed Report for the given UTC date range."""
+    out: list[dict] = []
+    page_size = 1000
+    for page in range(1, 51):  # safety cap at 50 pages
+        body = {
+            "dateRangeStart": start_iso,
+            "dateRangeEnd":   end_iso,
+            "detailedFilter": {
+                "page":       page,
+                "pageSize":   page_size,
+                "sortColumn": "DATE",
+            },
+        }
+        data    = _post(f"{_REPORTS}/workspaces/{workspace_id}/reports/detailed", body)
+        entries = data.get("timeentries") or []
+        out.extend(entries)
+        if len(entries) < page_size:
+            break
+    return out
+
+
 def _month_range_iso(month_key: str) -> tuple[str, str]:
     """'2025-03' -> ('2025-03-01T00:00:00.000Z', '2025-03-31T23:59:59.999Z')."""
     year, month = (int(x) for x in month_key.split("-"))

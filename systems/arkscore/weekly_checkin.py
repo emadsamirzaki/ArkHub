@@ -1,23 +1,26 @@
 """
 systems/arkscore/weekly_checkin.py
-PM input form — submit or update weekly project health check-ins.
+PM input form — compact table format with saved weeks history.
 """
 
 from __future__ import annotations
 
-from datetime import date as _date, timedelta
+from datetime import date as _date, datetime, timedelta
 
 import streamlit as st
 
 from systems.arkscore.utils.entry_store import (
+    delete_week_entries,
+    get_all_weeks,
+    get_entries_for_week,
     get_entry,
     upsert_entry,
     week_label_from_date,
 )
 from systems.arkscore.utils.project_store import get_active_projects
 
-STATUS_OPTIONS = ["On Track", "Off Track"]
-NOTE_TYPES     = ["Note", "Red Flag", "Success Story"]
+STATUS_OPTIONS = ["—", "On Track", "Off Track"]
+NOTE_OPTIONS   = ["—", "Note", "Red Flag", "Success Story"]
 
 CSS = """
 <style>
@@ -30,8 +33,14 @@ html,body,[class*="css"]{font-family:'Inter',sans-serif!important}
     border-bottom:1px solid #334155;
     text-transform:uppercase;letter-spacing:.1em;
 }
-.ci-proj-title{font-size:1rem;font-weight:700;color:#F1F5F9;margin:0 0 2px;}
-.ci-proj-pm   {font-size:.8rem;color:#94A3B8;margin:0;}
+.ci-th{
+    font-size:.7rem;font-weight:700;color:#64748B;
+    text-transform:uppercase;letter-spacing:.08em;
+    padding-bottom:4px;
+}
+.ci-proj-name{font-size:.9rem;font-weight:600;color:#F1F5F9;line-height:1.8;}
+.ci-proj-pm  {font-size:.75rem;color:#64748B;padding-top:10px;}
+.ci-submitted{font-size:.9rem;color:#22C55E;padding-top:8px;}
 </style>
 """
 
@@ -47,34 +56,39 @@ def _init_for_week(projects: list[dict], week_label: str) -> None:
         pid      = p["id"]
         existing = get_entry(pid, week_label)
         if existing:
-            st.session_state[f"ci_status_{pid}"]    = existing["health_status"]
-            st.session_state[f"ci_has_note_{pid}"]  = existing.get("note_type") is not None
-            st.session_state[f"ci_note_type_{pid}"] = existing.get("note_type") or NOTE_TYPES[0]
+            saved_status = existing["health_status"]
+            st.session_state[f"ci_status_{pid}"]    = saved_status if saved_status in STATUS_OPTIONS else "—"
+            nt = existing.get("note_type")
+            st.session_state[f"ci_note_type_{pid}"] = nt if nt else "—"
             st.session_state[f"ci_note_text_{pid}"] = existing.get("note_text") or ""
         else:
-            st.session_state.setdefault(f"ci_has_note_{pid}",  False)
-            st.session_state.setdefault(f"ci_note_type_{pid}", NOTE_TYPES[0])
+            st.session_state.setdefault(f"ci_status_{pid}",    "—")
+            st.session_state.setdefault(f"ci_note_type_{pid}", "—")
             st.session_state.setdefault(f"ci_note_text_{pid}", "")
 
 
-def _save_one(pid: str, week_label: str) -> str | None:
-    status    = st.session_state.get(f"ci_status_{pid}")
-    has_note  = st.session_state.get(f"ci_has_note_{pid}", False)
-    note_type = st.session_state.get(f"ci_note_type_{pid}") if has_note else None
+_SKIPPED = object()  # sentinel: status not set, skip silently
+
+def _save_one(pid: str, week_label: str):
+    """Return None on success, _SKIPPED if status is blank, or an error string."""
+    status    = st.session_state.get(f"ci_status_{pid}", "—")
+    if status == "—":
+        return _SKIPPED
+    note_type = st.session_state.get(f"ci_note_type_{pid}", "—")
+    note_type = note_type if note_type != "—" else None
     note_text = (
-        (st.session_state.get(f"ci_note_text_{pid}") or "").strip() if has_note else None
+        (st.session_state.get(f"ci_note_text_{pid}") or "").strip()
+        if note_type else None
     )
-    if not status:
-        return "Health Status is required."
-    if has_note and not note_text:
-        return "Note text is required when a note type is selected."
+    if note_type and not note_text:
+        return "Note text required when a note type is selected."
     upsert_entry(pid, week_label, status, note_type or None, note_text or None)
     return None
 
 
 def main() -> None:
     st.markdown(CSS, unsafe_allow_html=True)
-    st.markdown("# ✍️ Weekly Check-in")
+    st.markdown("# ✍️ Projects Weekly Check-in")
     st.markdown("---")
 
     projects = get_active_projects()
@@ -85,6 +99,7 @@ def main() -> None:
         )
         return
 
+    # ── Week picker ───────────────────────────────────────────────────────────
     col_wk, col_lbl, _ = st.columns([2, 4, 2])
     with col_wk:
         last_week = _date.today() - timedelta(days=7)
@@ -102,69 +117,82 @@ def main() -> None:
         )
     _init_for_week(projects, week_label)
 
+    # ── Check-in table ────────────────────────────────────────────────────────
     st.markdown(
         f'<p class="ci-section">Check-ins for {week_label}</p>',
+        unsafe_allow_html=True,
+    )
+
+    th1, th2, th3, th4, th5, th6 = st.columns([2.5, 1.5, 2, 2, 3.5, 0.5])
+    th1.markdown('<div class="ci-th">Project</div>',   unsafe_allow_html=True)
+    th2.markdown('<div class="ci-th">PM</div>',        unsafe_allow_html=True)
+    th3.markdown('<div class="ci-th">Status</div>',    unsafe_allow_html=True)
+    th4.markdown('<div class="ci-th">Note Type</div>', unsafe_allow_html=True)
+    th5.markdown('<div class="ci-th">Note</div>',      unsafe_allow_html=True)
+    th6.markdown("")
+    st.markdown(
+        "<hr style='margin:2px 0 10px 0;border-color:#334155'>",
         unsafe_allow_html=True,
     )
 
     for p in projects:
         pid       = p["id"]
         has_entry = get_entry(pid, week_label) is not None
-        badge     = "  ✅ Submitted" if has_entry else ""
 
-        with st.container(border=True):
-            hdr_l, _ = st.columns([5, 1])
-            with hdr_l:
-                st.markdown(
-                    f'<p class="ci-proj-title">{p["name"]}{badge}</p>'
-                    f'<p class="ci-proj-pm">PM: {p["pm"]}</p>',
-                    unsafe_allow_html=True,
-                )
+        c1, c2, c3, c4, c5, c6 = st.columns([2.5, 1.5, 2, 2, 3.5, 0.5])
 
-            current = st.session_state.get(f"ci_status_{pid}")
-            idx = STATUS_OPTIONS.index(current) if current in STATUS_OPTIONS else None
-            st.radio(
-                "Health Status *",
-                STATUS_OPTIONS,
-                index=idx,
-                horizontal=True,
-                key=f"ci_status_{pid}",
+        c1.markdown(
+            f'<div class="ci-proj-name">{p["name"]}</div>',
+            unsafe_allow_html=True,
+        )
+        c2.markdown(
+            f'<div class="ci-proj-pm">{p["pm"]}</div>',
+            unsafe_allow_html=True,
+        )
+
+        cur_status = st.session_state.get(f"ci_status_{pid}", STATUS_OPTIONS[0])
+        c3.selectbox(
+            "status", STATUS_OPTIONS,
+            index=STATUS_OPTIONS.index(cur_status) if cur_status in STATUS_OPTIONS else 0,
+            key=f"ci_status_{pid}",
+            label_visibility="collapsed",
+        )
+
+        cur_ntype = st.session_state.get(f"ci_note_type_{pid}", "—")
+        c4.selectbox(
+            "note type", NOTE_OPTIONS,
+            index=NOTE_OPTIONS.index(cur_ntype) if cur_ntype in NOTE_OPTIONS else 0,
+            key=f"ci_note_type_{pid}",
+            label_visibility="collapsed",
+        )
+
+        if st.session_state.get(f"ci_note_type_{pid}", "—") != "—":
+            c5.text_input(
+                "note",
+                key=f"ci_note_text_{pid}",
+                max_chars=500,
+                label_visibility="collapsed",
+                placeholder="Enter note…",
             )
 
-            st.checkbox("Add a note?", key=f"ci_has_note_{pid}")
+        if has_entry:
+            c6.markdown(
+                '<div class="ci-submitted">✅</div>',
+                unsafe_allow_html=True,
+            )
 
-            if st.session_state.get(f"ci_has_note_{pid}"):
-                nc1, nc2 = st.columns([1.5, 4])
-                with nc1:
-                    st.selectbox("Note Type", NOTE_TYPES, key=f"ci_note_type_{pid}")
-                with nc2:
-                    st.text_area(
-                        "Note Text *",
-                        key=f"ci_note_text_{pid}",
-                        max_chars=500,
-                        placeholder="Enter note… (max 500 characters)",
-                    )
-
-            _, btn_col = st.columns([6, 1])
-            with btn_col:
-                if st.button("Save", key=f"ci_save_{pid}", type="primary"):
-                    err = _save_one(pid, week_label)
-                    if err:
-                        st.error(err)
-                    else:
-                        st.success("Saved ✅")
-                        st.rerun()
-
-    st.markdown('<p class="ci-section">Save All</p>', unsafe_allow_html=True)
-    if st.button("💾 Save All Entries", type="primary"):
+    st.markdown("<br>", unsafe_allow_html=True)
+    if st.button("💾 Save All", type="primary"):
         errors: list[str] = []
         saved = 0
         for p in projects:
-            err = _save_one(p["id"], week_label)
-            if err:
-                errors.append(f"**{p['name']}**: {err}")
-            else:
+            result = _save_one(p["id"], week_label)
+            if result is _SKIPPED:
+                pass
+            elif result is None:
                 saved += 1
+            else:
+                errors.append(f"**{p['name']}**: {result}")
         for e in errors:
             st.error(e)
         if saved:
@@ -172,6 +200,57 @@ def main() -> None:
                 f"✅ {saved} entr{'y' if saved == 1 else 'ies'} saved for {week_label}."
             )
             st.rerun()
+        elif not errors:
+            st.info("No statuses set — select On Track or Off Track for at least one project.")
+
+    # ── Saved Weeks ───────────────────────────────────────────────────────────
+    st.markdown('<p class="ci-section">Saved Weeks</p>', unsafe_allow_html=True)
+
+    all_weeks = get_all_weeks()
+    if not all_weeks:
+        st.info("No check-ins saved yet.")
+        return
+
+    n_projects = len(projects)
+    sh1, sh2, sh3, sh4 = st.columns([4, 2, 2, 1])
+    sh1.markdown("**Week**")
+    sh2.markdown("**Last Updated**")
+    sh3.markdown("**Entries**")
+    sh4.markdown("")
+    st.markdown(
+        "<hr style='margin:4px 0 8px 0;border-color:#334155'>",
+        unsafe_allow_html=True,
+    )
+
+    for wk in all_weeks:
+        entries   = get_entries_for_week(wk)
+        n_entries = len(entries)
+        latest_at = ""
+        if entries:
+            latest_raw = max(e.get("submitted_at", "") for e in entries)
+            try:
+                latest_at = datetime.fromisoformat(latest_raw).strftime("%d %b %Y %H:%M")
+            except Exception:
+                latest_at = latest_raw
+
+        wc1, wc2, wc3, wc4 = st.columns([4, 2, 2, 1])
+        wc1.markdown(wk)
+        wc2.markdown(latest_at)
+        wc3.markdown(f"{n_entries} / {n_projects} projects")
+        if wc4.button("Delete", key=f"del_wk_{wk}", use_container_width=True):
+            st.session_state[f"confirm_del_wk_{wk}"] = True
+
+        if st.session_state.get(f"confirm_del_wk_{wk}"):
+            st.warning(f"Delete all check-ins for **{wk}**? This cannot be undone.")
+            ok_col, cancel_col = st.columns(2)
+            if ok_col.button("Yes, delete", key=f"yes_del_wk_{wk}", type="primary"):
+                delete_week_entries(wk)
+                st.session_state.pop(f"confirm_del_wk_{wk}", None)
+                st.success(f"Deleted check-ins for {wk}.")
+                st.rerun()
+            if cancel_col.button("Cancel", key=f"cancel_del_wk_{wk}"):
+                st.session_state.pop(f"confirm_del_wk_{wk}", None)
+                st.rerun()
 
 
 main()
