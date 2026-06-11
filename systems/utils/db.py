@@ -7,6 +7,8 @@ Streamlit Cloud's secrets panel (production).
 """
 from __future__ import annotations
 
+import threading
+import time
 from contextlib import contextmanager
 
 import psycopg2
@@ -79,10 +81,29 @@ CREATE TABLE IF NOT EXISTS project_contracts (
 ALTER TABLE project_contracts ADD COLUMN IF NOT EXISTS clockify_project_id TEXT;
 """
 
+_KEEPALIVE_INTERVAL = 240  # 4 minutes — resets Neon's 5-min auto-suspend timer
+
+
+def _start_keepalive(url: str) -> None:
+    """Daemon thread: ping DB every 4 minutes to prevent Neon auto-suspend."""
+    def _ping() -> None:
+        while True:
+            time.sleep(_KEEPALIVE_INTERVAL)
+            try:
+                conn = psycopg2.connect(url, connect_timeout=10)
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                conn.close()
+            except Exception:
+                pass  # best-effort; next tick will retry
+
+    t = threading.Thread(target=_ping, daemon=True)
+    t.start()
+
 
 @st.cache_resource
 def _init_db() -> str:
-    """Connect, create schema if needed, return URL. Runs once per Streamlit process."""
+    """Connect, create schema if needed, start keep-alive, return URL. Runs once per process."""
     url = st.secrets["DATABASE_URL"]
     conn = psycopg2.connect(url, connect_timeout=15)
     try:
@@ -91,13 +112,31 @@ def _init_db() -> str:
         conn.commit()
     finally:
         conn.close()
+    _start_keepalive(url)
     return url
+
+
+_CONNECT_RETRIES = 2
+_CONNECT_RETRY_DELAY = 2.0  # seconds between retries
 
 
 @contextmanager
 def db_cursor(*, dict_cursor: bool = True):
-    """Yield a psycopg2 cursor in a transaction. Commits on exit, rolls back on error."""
-    conn = psycopg2.connect(_init_db(), connect_timeout=15)
+    """Yield a psycopg2 cursor in a transaction. Retries on OperationalError (Neon wakeup)."""
+    url = _init_db()
+    conn = None
+    last_err: Exception | None = None
+    for attempt in range(_CONNECT_RETRIES + 1):
+        try:
+            conn = psycopg2.connect(url, connect_timeout=15)
+            break
+        except psycopg2.OperationalError as exc:
+            last_err = exc
+            if attempt < _CONNECT_RETRIES:
+                time.sleep(_CONNECT_RETRY_DELAY)
+    if conn is None:
+        raise last_err  # type: ignore[misc]
+
     factory = psycopg2.extras.RealDictCursor if dict_cursor else None
     try:
         cur = conn.cursor(cursor_factory=factory)
