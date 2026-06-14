@@ -22,6 +22,7 @@ from systems.people.utils.pattern_store import (
     get_pattern,
     get_status_now,
 )
+from systems.utils import ui
 
 
 def to_12h(t: str) -> str:
@@ -41,11 +42,12 @@ DAY_LABELS = {
 
 TZ = ZoneInfo("Africa/Cairo")
 
+# Each status maps to a Streamlit semantic badge colour (flips with the theme).
 STATUS_META = {
-    "home":   {"label": "🏠 Working from Home", "bg": "#14532D", "color": "#86EFAC"},
-    "office": {"label": "🏢 In the Office",      "bg": "#1E3A5F", "color": "#93C5FD"},
-    "away":   {"label": "☕ Away / Break",        "bg": "#78350F", "color": "#FCD34D"},
-    "off":    {"label": "⚫ Not Working",         "bg": "#1E293B", "color": "#64748B"},
+    "home":   {"label": "🏠 Working from Home", "badge": "green"},
+    "office": {"label": "🏢 In the Office",      "badge": "blue"},
+    "away":   {"label": "☕ Away / Break",        "badge": "orange"},
+    "off":    {"label": "⚫ Not Working",         "badge": "gray"},
 }
 
 # Calendar display range
@@ -56,33 +58,21 @@ HOUR_H  = 60    # px per hour
 GUTTER  = 56    # px — time-label column
 COL_W   = 150   # px — per employee column
 
+# Event-chip colours (self-contained bg+fg blocks — legible on light and dark).
 _LOC = {
-    "home":   ("🏠 Home",   "#14532D", "#22C55E", "#86EFAC"),
-    "office": ("🏢 Office", "#1E3A5F", "#3B82F6", "#93C5FD"),
-    "away":   ("☕ Away",   "#78350F", "#F59E0B", "#FCD34D"),
+    "home":   ("🏠 Home",   "#15803D", "#22C55E", "#ECFDF5"),
+    "office": ("🏢 Office", "#1D4ED8", "#3B82F6", "#EFF6FF"),
+    "away":   ("☕ Away",   "#B45309", "#F59E0B", "#FFFBEB"),
 }
 
-CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
-.section-heading {
-    font-size: 0.75rem; font-weight: 700; color: #94A3B8;
-    margin: 28px 0 14px 0; padding-bottom: 8px;
-    border-bottom: 1px solid #334155;
-    text-transform: uppercase; letter-spacing: 0.1em;
-}
-
-/* ── Now-cards ──
- * The st.button IS the entire card.
- * Role and status are injected via CSS ::after pseudo-elements so they
- * appear inside the button with their own colours — no extra DOM elements.
- */
-
-.next-row  { background:#1E293B; border-radius:8px; padding:10px 14px; margin-bottom:6px; font-size:0.88rem; color:#CBD5E1; }
-.next-time { color:#60A5FA; font-weight:700; }
-</style>
-"""
+# Theme-neutral chrome for the custom calendar: transparent surfaces + translucent
+# gridlines so the panel adopts whichever background (light/dark) is active.
+CAL_BORDER = "rgba(128,128,128,0.28)"
+GRID_HOUR  = "rgba(128,128,128,0.22)"
+GRID_HALF  = "rgba(128,128,128,0.11)"
+HOUR_LABEL = "#6B7280"
+ROLE_LABEL = "#6B7280"
+NOW_COLOR  = "#EF4444"
 
 
 def _now() -> datetime:
@@ -115,10 +105,7 @@ def _pattern_dialog(emp: dict) -> None:
     if emp.get("mobile"):
         parts.append(f'📱 {emp["mobile"]}')
     if parts:
-        st.markdown(
-            f'<span style="font-size:0.85rem;color:#94A3B8;">{"&nbsp;&nbsp;|&nbsp;&nbsp;".join(parts)}</span>',
-            unsafe_allow_html=True,
-        )
+        st.caption("　|　".join(parts))
     st.divider()
     if not pat:
         st.info("No working pattern set yet.")
@@ -141,21 +128,20 @@ def _section_calendar_day(employees: list[dict], day: str, now: datetime) -> Non
         (now_min - cal_s) / 60 * HOUR_H if cal_s <= now_min <= cal_e else None
     )
 
-    # ── Column headers ────────────────────────────────────────────────────────
+    # ── Column headers (name colour omitted → inherits theme text, so it flips) ─
     col_heads = "".join(
         f'<div style="width:{COL_W}px;flex-shrink:0;padding:10px 6px 8px;'
-        f'text-align:center;border-right:1px solid #1E293B;box-sizing:border-box;">'
-        f'<div style="font-size:0.8rem;font-weight:700;color:#F1F5F9;'
+        f'text-align:center;border-right:1px solid {CAL_BORDER};box-sizing:border-box;">'
+        f'<div style="font-size:0.82rem;font-weight:700;'
         f'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{emp["name"]}</div>'
-        f'<div style="font-size:0.65rem;color:#64748B;margin-top:1px;">{emp["role"]}</div>'
+        f'<div style="font-size:0.7rem;color:{ROLE_LABEL};margin-top:1px;">{emp["role"]}</div>'
         f'</div>'
         for emp in employees
     )
     header = (
-        f'<div style="display:flex;background:#0F172A;border-bottom:2px solid #334155;'
-        f'position:sticky;top:0;z-index:10;">'
-        f'<div style="width:{GUTTER}px;flex-shrink:0;border-right:1px solid #1E293B;'
-        f'background:#0F172A;"></div>'
+        f'<div style="display:flex;border-bottom:2px solid {CAL_BORDER};'
+        f'position:sticky;top:0;z-index:10;backdrop-filter:blur(2px);">'
+        f'<div style="width:{GUTTER}px;flex-shrink:0;border-right:1px solid {CAL_BORDER};"></div>'
         f'{col_heads}'
         f'</div>'
     )
@@ -163,13 +149,13 @@ def _section_calendar_day(employees: list[dict], day: str, now: datetime) -> Non
     # ── Time-label gutter ─────────────────────────────────────────────────────
     hour_labels = "".join(
         f'<div style="position:absolute;top:{i * HOUR_H}px;right:6px;'
-        f'transform:translateY(-50%);font-size:0.65rem;color:#475569;white-space:nowrap;">'
+        f'transform:translateY(-50%);font-size:0.72rem;color:{HOUR_LABEL};white-space:nowrap;">'
         f'{to_12h(f"{CAL_START_H + i:02d}:00")}</div>'
         for i in range(n_h + 1)
     )
     gutter_html = (
         f'<div style="width:{GUTTER}px;flex-shrink:0;position:relative;'
-        f'border-right:1px solid #1E293B;">{hour_labels}</div>'
+        f'border-right:1px solid {CAL_BORDER};">{hour_labels}</div>'
     )
 
     # ── Hour + half-hour gridlines ────────────────────────────────────────────
@@ -179,13 +165,13 @@ def _section_calendar_day(employees: list[dict], day: str, now: datetime) -> Non
         half = top + HOUR_H // 2
         gridlines += (
             f'<div style="position:absolute;left:0;right:0;top:{top}px;'
-            f'height:1px;background:#1E293B;z-index:1;"></div>'
+            f'height:1px;background:{GRID_HOUR};z-index:1;"></div>'
             f'<div style="position:absolute;left:0;right:0;top:{half}px;'
-            f'height:1px;background:#0F2030;z-index:1;"></div>'
+            f'height:1px;background:{GRID_HALF};z-index:1;"></div>'
         )
     gridlines += (
         f'<div style="position:absolute;left:0;right:0;top:{n_h * HOUR_H}px;'
-        f'height:1px;background:#1E293B;z-index:1;"></div>'
+        f'height:1px;background:{GRID_HOUR};z-index:1;"></div>'
     )
 
     # ── "Now" indicator line + dot ────────────────────────────────────────────
@@ -193,9 +179,9 @@ def _section_calendar_day(employees: list[dict], day: str, now: datetime) -> Non
     if now_top is not None:
         now_line = (
             f'<div style="position:absolute;left:0;right:0;top:{now_top:.1f}px;'
-            f'height:2px;background:#F472B6;z-index:12;pointer-events:none;">'
+            f'height:2px;background:{NOW_COLOR};z-index:12;pointer-events:none;">'
             f'<div style="position:absolute;left:-5px;top:-4px;width:10px;height:10px;'
-            f'border-radius:50%;background:#F472B6;"></div>'
+            f'border-radius:50%;background:{NOW_COLOR};"></div>'
             f'</div>'
         )
 
@@ -215,11 +201,11 @@ def _section_calendar_day(employees: list[dict], day: str, now: datetime) -> Non
             top_px = (s_m - cal_s) / 60 * HOUR_H
             h_px   = max((e_m - s_m) / 60 * HOUR_H - 3, 4)
             loc    = slot.get("location", "home")
-            lbl, bg, border_c, fg = _LOC.get(loc, ("", "#1E293B", "#475569", "#94A3B8"))
+            lbl, bg, border_c, fg = _LOC.get(loc, ("", "#475569", "#64748B", "#F8FAFC"))
 
             label_html = lbl if h_px >= 18 else ""
             time_html  = (
-                f'<div style="font-size:0.62rem;opacity:0.75;margin-top:1px;">'
+                f'<div style="font-size:0.66rem;opacity:0.85;margin-top:1px;">'
                 f'{to_12h(slot["start"])} – {to_12h(slot["end"])}</div>'
                 if h_px >= 34 else ""
             )
@@ -227,7 +213,7 @@ def _section_calendar_day(employees: list[dict], day: str, now: datetime) -> Non
             events += (
                 f'<div style="position:absolute;top:{top_px:.1f}px;height:{h_px:.1f}px;'
                 f'left:4px;right:4px;background:{bg};border-left:3px solid {border_c};'
-                f'border-radius:5px;padding:3px 6px;font-size:0.73rem;font-weight:600;'
+                f'border-radius:5px;padding:3px 6px;font-size:0.74rem;font-weight:600;'
                 f'color:{fg};overflow:hidden;z-index:5;box-sizing:border-box;">'
                 f'{label_html}{time_html}'
                 f'</div>'
@@ -235,14 +221,14 @@ def _section_calendar_day(employees: list[dict], day: str, now: datetime) -> Non
 
         emp_cols += (
             f'<div style="width:{COL_W}px;flex-shrink:0;position:relative;'
-            f'border-right:1px solid #1E293B;z-index:2;">{events}</div>'
+            f'border-right:1px solid {CAL_BORDER};z-index:2;">{events}</div>'
         )
 
     min_w = GUTTER + COL_W * len(employees)
 
     html = (
-        f'<div style="border:1px solid #1E293B;border-radius:12px;overflow:hidden;'
-        f'background:#0F172A;font-family:Inter,sans-serif;">'
+        f'<div style="border:1px solid {CAL_BORDER};border-radius:12px;overflow:hidden;'
+        f'font-family:Inter,sans-serif;">'
         f'<div style="overflow-x:auto;overflow-y:auto;max-height:640px;">'
         f'<div style="min-width:{min_w}px;">'
         f'{header}'
@@ -259,81 +245,32 @@ def _section_calendar_day(employees: list[dict], day: str, now: datetime) -> Non
     st.markdown(html, unsafe_allow_html=True)
 
 
-# ── Right-now status cards ────────────────────────────────────────────────────
+# ── Right-now status cards (native — accessible and theme-aware) ───────────────
 
 def _section_now(employees: list[dict], day: str, time_str: str) -> None:
-    st.markdown('<p class="section-heading">Right Now</p>', unsafe_allow_html=True)
+    ui.section("Right Now")
     st.markdown(
-        '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;">'
-        '<span style="font-size:0.75rem;color:#94A3B8;">'
-        '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;'
-        'background:#14532D;margin-right:5px;vertical-align:middle;"></span>Working from Home</span>'
-        '<span style="font-size:0.75rem;color:#94A3B8;">'
-        '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;'
-        'background:#1E3A5F;margin-right:5px;vertical-align:middle;"></span>In the Office</span>'
-        '<span style="font-size:0.75rem;color:#94A3B8;">'
-        '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;'
-        'background:#78350F;margin-right:5px;vertical-align:middle;"></span>Away / Break</span>'
-        '<span style="font-size:0.75rem;color:#94A3B8;">'
-        '<span style="display:inline-block;width:10px;height:10px;border-radius:3px;'
-        'background:#1E293B;border:1px solid #334155;margin-right:5px;vertical-align:middle;"></span>Not Working</span>'
-        '</div>',
-        unsafe_allow_html=True,
+        ":green-badge[🏠 Home]　:blue-badge[🏢 Office]　"
+        ":orange-badge[☕ Away]　:gray-badge[⚫ Not Working]"
     )
-
-    # Build one global <style> block covering all Streamlit DOM variants.
-    # The broad `:has(.now-m-X) + * button` selector works regardless of what
-    # data-testid Streamlit uses for its wrapper elements in the deployed version.
-    css = "<style>"
-    card_data: list[tuple] = []
-    for emp in employees:
-        status = get_status_now(emp["id"], day, time_str)
-        meta   = STATUS_META[status]
-        cid    = emp["id"]
-        bg     = meta["bg"]
-        fg     = meta["color"]
-        role   = emp["role"].replace('"', '\\"')
-        if status == "off":
-            nxt   = get_next_transition(emp["id"], day, time_str)
-            label = (f"Starting at {to_12h(nxt[0])}" if nxt else meta["label"]).replace('"', '\\"')
-        else:
-            label = meta["label"].replace('"', '\\"')
-        card_data.append((emp, cid))
-        # Selectors scoped to column containers — this prevents the styles from
-        # leaking into the dialog's close button, which is NOT inside a column.
-        # Two column data-testid variants cover different Streamlit versions.
-        sel  = (f'[data-testid="stColumn"] :has(.now-m-{cid}) + * button,'
-                f'[data-testid="column"] :has(.now-m-{cid}) + * button')
-        selp = (f'[data-testid="stColumn"] :has(.now-m-{cid}) + * button p::after,'
-                f'[data-testid="column"] :has(.now-m-{cid}) + * button p::after')
-        sela = (f'[data-testid="stColumn"] :has(.now-m-{cid}) + * button::after,'
-                f'[data-testid="column"] :has(.now-m-{cid}) + * button::after')
-        css += (
-            f'{sel}{{background:{bg}!important;border:1px solid #334155!important;'
-            f'border-radius:12px!important;min-height:96px!important;'
-            f'width:100%!important;text-align:left!important;padding:16px 20px!important;'
-            f'color:#F1F5F9!important;font-weight:700!important;font-size:1rem!important;'
-            f'box-shadow:none!important;cursor:pointer!important;'
-            f'display:flex!important;flex-direction:column!important;'
-            f'align-items:flex-start!important;}}'
-            f'{selp}{{content:"{role}";display:block;'
-            f'font-size:0.8rem;font-weight:400;color:#94A3B8;margin-top:4px;}}'
-            f'{sela}{{content:"{label}";display:block;'
-            f'font-size:0.85rem;font-weight:600;color:{fg};margin-top:10px;}}'
-        )
-    css += "</style>"
-    st.markdown(css, unsafe_allow_html=True)
+    st.markdown("")
 
     cols = st.columns(4)
-    for i, (emp, cid) in enumerate(card_data):
+    for i, emp in enumerate(employees):
+        status = get_status_now(emp["id"], day, time_str)
+        meta   = STATUS_META[status]
+        if status == "off":
+            nxt   = get_next_transition(emp["id"], day, time_str)
+            label = f"Starting at {to_12h(nxt[0])}" if nxt else meta["label"]
+        else:
+            label = meta["label"]
         with cols[i % 4]:
-            # <span> (inline element) stays valid inside Streamlit's <p> wrapper —
-            # a <div> would cause the browser HTML parser to restructure the DOM,
-            # breaking the adjacent-sibling CSS selector.
-            st.markdown(f'<span class="now-m-{cid}" style="display:none"></span>',
-                        unsafe_allow_html=True)
-            if st.button(emp["name"], key=f"now_btn_{cid}", use_container_width=True):
-                _pattern_dialog(emp)
+            with st.container(border=True):
+                st.markdown(f"**{emp['name']}**")
+                st.caption(emp["role"])
+                st.markdown(f":{meta['badge']}-badge[{label}]")
+                if st.button("View schedule", key=f"now_btn_{emp['id']}", use_container_width=True):
+                    _pattern_dialog(emp)
 
 
 # ── Upcoming transitions within the next hour ─────────────────────────────────
@@ -357,29 +294,22 @@ def _section_next_hour(employees: list[dict], day: str, now: datetime) -> None:
             changes.append((at_time, emp["name"], verb, new_status))
 
     changes.sort()
-    st.markdown('<p class="section-heading">Changes in the Next Hour</p>', unsafe_allow_html=True)
+    ui.section("Changes in the Next Hour")
     if not changes:
-        st.markdown(
-            '<div class="next-row" style="color:#64748B;">No changes expected in the next hour.</div>',
-            unsafe_allow_html=True,
-        )
+        st.caption("No changes expected in the next hour.")
         return
     for at_time, name, verb, new_status in changes:
         meta = STATUS_META[new_status]
         st.markdown(
-            f'<div class="next-row">'
-            f'<b>{name}</b> — {verb} '
-            f'<span style="color:{meta["color"]};">{meta["label"]}</span> '
-            f'at <span class="next-time">{to_12h(at_time)}</span>'
-            f'</div>',
-            unsafe_allow_html=True,
+            f"**{name}** — {verb} :{meta['badge']}-badge[{meta['label']}] "
+            f"at **{to_12h(at_time)}**"
         )
 
 
 # ── Full schedule expandable ──────────────────────────────────────────────────
 
 def _section_employee_details(employees: list[dict]) -> None:
-    st.markdown('<p class="section-heading">Employee Schedules</p>', unsafe_allow_html=True)
+    ui.section("Employee Schedules")
     for emp in employees:
         pat = get_pattern(emp["id"])
         with st.expander(f"{emp['name']} — {emp['role']}"):
@@ -394,21 +324,18 @@ def _section_employee_details(employees: list[dict]) -> None:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    st.markdown(CSS, unsafe_allow_html=True)
-
     now        = _now()
     day        = _weekday_name(now)
     time_str   = _time_str(now)
     is_workday = day in DAYS
 
-    st.markdown("# 📍 Availability Now")
+    st.title("📍 Availability Now")
     day_display = DAY_LABELS.get(day, day.capitalize())
     st.markdown(
         f"**{day_display}** · {now.strftime('%d %b %Y')} · "
-        f"<span style='color:#60A5FA;font-weight:700;'>{to_12h(time_str)}</span> Cairo time",
-        unsafe_allow_html=True,
+        f":blue[**{to_12h(time_str)}**] Cairo time"
     )
-    st.markdown("---")
+    st.divider()
 
     employees = get_active_employees()
     if not employees:
@@ -445,7 +372,7 @@ def main() -> None:
     _section_next_hour(filtered, day, now)
 
     st.markdown("")
-    st.markdown('<p class="section-heading">Day Calendar</p>', unsafe_allow_html=True)
+    ui.section("Day Calendar")
     _section_calendar_day(filtered, day, now)
 
     st.markdown("")

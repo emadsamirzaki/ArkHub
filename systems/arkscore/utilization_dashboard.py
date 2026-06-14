@@ -19,61 +19,17 @@ from systems.arkscore.utils.constants import (
 )
 from systems.arkscore.utils.parse_clockify import calculate_utilization, get_project_breakdown
 from systems.arkscore.utils.utilization_store import get_all_reports, get_all_week_labels, get_report
-
-# ── CSS ───────────────────────────────────────────────────────────────────────
-st.markdown(
-    """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
-
-.metric-card {
-    background: #1E293B; border-radius: 14px; padding: 22px 18px;
-    text-align: center; border: 1px solid #334155; min-height: 116px;
-}
-.metric-label {
-    color: #94A3B8; font-size: 0.72rem; text-transform: uppercase;
-    letter-spacing: 0.1em; font-weight: 600; margin: 0 0 10px 0;
-}
-.metric-value { font-size: 2.15rem; font-weight: 700; margin: 0; line-height: 1.1; }
-.metric-sub   { color: #64748B; font-size: 0.76rem; margin: 6px 0 0 0; }
-.section-heading {
-    font-size: 0.8rem; font-weight: 700; color: #94A3B8;
-    margin: 32px 0 14px 0; padding-bottom: 8px;
-    border-bottom: 1px solid #334155;
-    text-transform: uppercase; letter-spacing: 0.1em;
-}
-.week-badge {
-    display: inline-block; background: #1E293B; border: 1px solid #334155;
-    border-radius: 8px; padding: 5px 12px; color: #94A3B8;
-    font-size: 0.85rem; font-weight: 500; margin-bottom: 4px;
-}
-</style>
-""",
-    unsafe_allow_html=True,
-)
+from systems.utils import ui
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _status_color(util_pct: float) -> str:
+def _status_label(util_pct: float) -> str:
     if util_pct >= ON_TARGET_THRESHOLD:
-        return COLOR_ON_TARGET
+        return "On Target"
     if util_pct >= WATCH_THRESHOLD:
-        return COLOR_WATCH
-    return COLOR_CRITICAL
-
-
-def _metric_card(title: str, value: str, subtitle: str = "", color: str = "#F8FAFC") -> None:
-    sub_html = f'<p class="metric-sub">{subtitle}</p>' if subtitle else ""
-    st.markdown(
-        f"""<div class="metric-card">
-  <p class="metric-label">{title}</p>
-  <p class="metric-value" style="color:{color};">{value}</p>
-  {sub_html}
-</div>""",
-        unsafe_allow_html=True,
-    )
+        return "Watch"
+    return "Critical"
 
 
 def _utilization_chart(util_df: pd.DataFrame) -> go.Figure:
@@ -93,17 +49,18 @@ def _utilization_chart(util_df: pd.DataFrame) -> go.Figure:
         textposition="outside",
         cliponaxis=False,
     ))
+    # Neutral mid-gray reads on both the dark and light themes.
     fig.add_vline(
         x=80, line_dash="dash", line_color="#94A3B8", line_width=1.5,
         annotation_text="Target (80%)", annotation_position="top",
         annotation_font_color="#94A3B8", annotation_font_size=11,
     )
+    # Transparent backgrounds + theme="streamlit" let the chart inherit the
+    # active theme's colours, so it flips with light/dark.
     fig.update_layout(
-        xaxis=dict(range=[0, 130], title="Utilization %", color="#94A3B8",
-                   gridcolor="#334155", ticksuffix="%", zeroline=False),
-        yaxis=dict(title="", color="#CBD5E1"),
-        plot_bgcolor="#1E293B", paper_bgcolor="#1E293B",
-        font=dict(color="#F8FAFC", family="Inter, sans-serif", size=13),
+        xaxis=dict(range=[0, 130], title="Utilization %", ticksuffix="%", zeroline=False),
+        yaxis=dict(title=""),
+        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=20, r=90, t=30, b=40),
         height=max(320, len(df_s) * 52 + 90),
         showlegend=False,
@@ -131,51 +88,38 @@ def _wow_table(util_now: pd.DataFrame, report_prev: dict) -> None:
         this_w = row["Utilization %"]
         last_w = prev_map[name]
         delta  = this_w - last_w
-        if delta > 0:
-            arrow, color = f"▲ +{delta:.1f}%", COLOR_ON_TARGET
-        elif delta < 0:
-            arrow, color = f"▼ {delta:.1f}%", COLOR_CRITICAL
-        else:
-            arrow, color = "—", "#94A3B8"
-        rows.append({"Name": name, "This Week": f"{this_w:.1f}%",
-                     "Last Week": f"{last_w:.1f}%",
-                     "_delta": delta, "_arrow": arrow, "_color": color})
+        arrow  = "▲" if delta > 0 else ("▼" if delta < 0 else "—")
+        rows.append({
+            "Name": name,
+            "This Week": this_w,
+            "Last Week": last_w,
+            "Change": f"{arrow} {delta:+.1f}%" if delta else "—",
+            "_delta": delta,
+        })
 
     if not rows:
         st.info("No team members in common with last week.")
         return
 
     rows.sort(key=lambda r: -r["_delta"])
-    html_rows = "".join(
-        f"<tr>"
-        f"<td style='padding:6px 12px'>{r['Name']}</td>"
-        f"<td style='padding:6px 12px;text-align:center'>{r['This Week']}</td>"
-        f"<td style='padding:6px 12px;text-align:center'>{r['Last Week']}</td>"
-        f"<td style='padding:6px 12px;text-align:center;color:{r['_color']};font-weight:600'>"
-        f"{r['_arrow']}</td></tr>"
-        for r in rows
-    )
-    st.markdown(
-        f"""<table style='width:100%;border-collapse:collapse;font-size:.88rem;
-                          font-family:Inter,sans-serif;color:#E2E8F0;'>
-  <thead><tr style='border-bottom:1px solid #334155;color:#94A3B8;font-size:.75rem;
-                    text-transform:uppercase;letter-spacing:.05em;'>
-    <th style='padding:6px 12px;text-align:left'>Name</th>
-    <th style='padding:6px 12px;text-align:center'>This Week</th>
-    <th style='padding:6px 12px;text-align:center'>Last Week</th>
-    <th style='padding:6px 12px;text-align:center'>Change</th>
-  </tr></thead>
-  <tbody>{html_rows}</tbody>
-</table>""",
-        unsafe_allow_html=True,
+    wow_df = pd.DataFrame(rows).drop(columns="_delta")
+    st.dataframe(
+        wow_df,
+        column_config={
+            "This Week": st.column_config.NumberColumn("This Week", format="%.1f%%"),
+            "Last Week": st.column_config.NumberColumn("Last Week", format="%.1f%%"),
+            "Change":    st.column_config.TextColumn("Change"),
+        },
+        use_container_width=True,
+        hide_index=True,
     )
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    st.markdown("# 📊 Utilization Dashboard")
-    st.markdown("---")
+    st.title("📊 Utilization Dashboard")
+    st.divider()
 
     week_labels = get_all_week_labels()
     all_reports = get_all_reports()
@@ -187,19 +131,13 @@ def main() -> None:
         return
 
     # ── Week selector ─────────────────────────────────────────────────────────
-    col_sel, col_badge, _ = st.columns([2, 3, 2])
+    col_sel, _ = st.columns([2, 3])
     with col_sel:
         default_week = st.session_state.pop("util_selected_week", week_labels[0])
         if default_week not in week_labels:
             default_week = week_labels[0]
         sel_idx    = week_labels.index(default_week)
         week_label = st.selectbox("Select Week", week_labels, index=sel_idx)
-    with col_badge:
-        st.markdown(
-            f"<div style='padding-top:28px'>"
-            f"<span class='week-badge'>📅 {week_label}</span></div>",
-            unsafe_allow_html=True,
-        )
 
     report = get_report(week_label)
     if not report:
@@ -224,38 +162,29 @@ def main() -> None:
     non_bill_pct = (non_bill_hrs / total_hrs * 100) if total_hrs else 0.0
 
     # ── Section 1: Summary cards ──────────────────────────────────────────────
-    st.markdown('<p class="section-heading">Summary</p>', unsafe_allow_html=True)
+    ui.section("Summary")
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        _metric_card("Team Utilization", f"{team_util:.1f}%",
-                     f"{len(util_df)} members · target {int(TARGET_HOURS)} h",
-                     _status_color(team_util))
+        st.metric("Team Utilization", f"{team_util:.1f}%",
+                  help=f"{len(util_df)} members · target {int(TARGET_HOURS)} h", border=True)
+        st.markdown(ui.status_badge(_status_label(team_util)))
     with c2:
-        _metric_card("Total Billable", f"{bill_pct:.1f}%", f"{bill_hrs:.1f} hrs")
+        st.metric("Total Billable", f"{bill_pct:.1f}%", help=f"{bill_hrs:.1f} hrs", border=True)
     with c3:
-        _metric_card("Total Non-Billable", f"{non_bill_pct:.1f}%", f"{non_bill_hrs:.1f} hrs")
+        st.metric("Total Non-Billable", f"{non_bill_pct:.1f}%", help=f"{non_bill_hrs:.1f} hrs", border=True)
     with c4:
-        _metric_card("Total Hours Logged", f"{total_hrs:.1f}", "hours this week")
-
-    st.markdown("<br>", unsafe_allow_html=True)
+        st.metric("Total Hours Logged", f"{total_hrs:.1f}", help="hours this week", border=True)
 
     # ── Section 2: Chart ──────────────────────────────────────────────────────
-    st.markdown('<p class="section-heading">Team Utilization Chart</p>',
-                unsafe_allow_html=True)
+    ui.section("Team Utilization Chart")
     st.markdown(
-        """<div style='display:flex;gap:20px;align-items:center;margin-bottom:10px;
-                       font-size:0.78rem;font-family:Inter,sans-serif;color:#94A3B8;'>
-  <span><span style='color:#22C55E;font-size:1rem;'>●</span>&nbsp;<b style='color:#CBD5E1;'>On Target</b>&nbsp;≥ 80%</span>
-  <span><span style='color:#F59E0B;font-size:1rem;'>●</span>&nbsp;<b style='color:#CBD5E1;'>Watch</b>&nbsp;60 – 79%</span>
-  <span><span style='color:#EF4444;font-size:1rem;'>●</span>&nbsp;<b style='color:#CBD5E1;'>Critical</b>&nbsp;&lt; 60%</span>
-  <span style='margin-left:6px;'>· Target = 35 hrs / week</span>
-</div>""",
-        unsafe_allow_html=True,
+        ":green-badge[● On Target ≥ 80%]　:orange-badge[● Watch 60–79%]　"
+        ":red-badge[● Critical < 60%]　·　Target = 35 hrs / week"
     )
-    st.plotly_chart(_utilization_chart(util_df), use_container_width=True)
+    st.plotly_chart(_utilization_chart(util_df), use_container_width=True, theme="streamlit")
 
     # ── Section 3: Detail table ───────────────────────────────────────────────
-    st.markdown('<p class="section-heading">Team Details</p>', unsafe_allow_html=True)
+    ui.section("Team Details")
     table_cols = ["Rank", "Name", "Total Hrs", "Billable Hrs",
                   "Non-Bill Hrs", "Billable %", "Utilization %", "Status"]
     st.dataframe(
@@ -276,8 +205,7 @@ def main() -> None:
     )
 
     # ── Section 4: Per-person breakdown ──────────────────────────────────────
-    st.markdown('<p class="section-heading">Per-Person Breakdown</p>',
-                unsafe_allow_html=True)
+    ui.section("Per-Person Breakdown")
     for _, row in util_df.iterrows():
         name      = row["Name"]
         util_pct  = row["Utilization %"]
@@ -319,12 +247,8 @@ def main() -> None:
         prev_reports  = [r for r in all_reports if r.get("week_start", "") < current_start]
         if prev_reports:
             prev_report = prev_reports[0]
-            st.markdown(
-                f'<p class="section-heading">Week-over-Week Comparison '
-                f'<span style="font-weight:400;color:#64748B;text-transform:none;'
-                f'font-size:.75rem;">vs {prev_report["week_label"]}</span></p>',
-                unsafe_allow_html=True,
-            )
+            ui.section("Week-over-Week Comparison")
+            st.caption(f"vs {prev_report['week_label']}")
             _wow_table(util_df, prev_report)
 
 

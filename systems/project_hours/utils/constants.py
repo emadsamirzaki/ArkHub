@@ -36,3 +36,12 @@ STATUS_ICONS: dict[str, str] = {
     STATUS_ABOVE:    "🟡",
     STATUS_UPCOMING: "⚪",
 }
+
+# Streamlit semantic colour names per status — drives theme-aware badges and
+# coloured text (:green[…] etc.) so pace indicators flip with light/dark.
+STATUS_COLOR_NAMES: dict[str, str] = {
+    STATUS_IN_RANGE: "green",
+    STATUS_BELOW:    "red",
+    STATUS_ABOVE:    "orange",
+    STATUS_UPCOMING: "gray",
+}

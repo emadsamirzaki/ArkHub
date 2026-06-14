@@ -14,6 +14,7 @@ from systems.people.utils.employee_store import (
     load_employees,
     update_employee,
 )
+from systems.utils import ui
 
 _NEW_ROLE = "✏️  Add new role…"
 
@@ -29,32 +30,6 @@ def _role_picker(key: str, current: str = "") -> str:
                              placeholder="e.g. Engineer, PM, Designer",
                              key=key + "_new")
     return picked
-
-CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
-
-.section-heading {
-    font-size: 0.75rem; font-weight: 700; color: #94A3B8;
-    margin: 28px 0 14px 0; padding-bottom: 8px;
-    border-bottom: 1px solid #334155;
-    text-transform: uppercase; letter-spacing: 0.1em;
-}
-.emp-row-name   { font-weight: 600; color: #F1F5F9; font-size: 0.92rem; }
-.emp-row-email  { color: #94A3B8; font-size: 0.85rem; }
-.emp-row-mobile { color: #94A3B8; font-size: 0.85rem; }
-.emp-row-role   { color: #CBD5E1; font-size: 0.88rem; }
-.badge-active {
-    display: inline-block; background: #14532D; color: #86EFAC;
-    font-size: 0.7rem; font-weight: 700; padding: 2px 10px; border-radius: 999px;
-}
-.badge-inactive {
-    display: inline-block; background: #334155; color: #94A3B8;
-    font-size: 0.7rem; font-weight: 700; padding: 2px 10px; border-radius: 999px;
-}
-</style>
-"""
 
 
 def _add_form() -> None:
@@ -88,7 +63,7 @@ def _employee_table() -> None:
         st.info("No employees yet — add one above.")
         return
 
-    st.markdown('<p class="section-heading">All Employees</p>', unsafe_allow_html=True)
+    ui.section("All Employees")
 
     # Column headers
     h1, h2, h3, h4, h5, h6, h7 = st.columns([3, 2.5, 2, 2, 1.5, 1, 1])
@@ -98,7 +73,7 @@ def _employee_table() -> None:
     h4.markdown("**Role**")
     h5.markdown("**Status**")
 
-    st.markdown("<hr style='margin:4px 0 8px 0; border-color:#334155'>", unsafe_allow_html=True)
+    st.divider()
 
     for emp in employees:
         eid = emp["id"]
@@ -132,17 +107,18 @@ def _employee_table() -> None:
                     st.rerun()
         else:
             # ── Display row ───────────────────────────────────────────────────
-            c1, c2, c3, c4, c5, c6, c7 = st.columns([3, 2.5, 2, 2, 1.5, 1, 1])
+            c1, c2, c3, c4, c5, c6, c7 = st.columns([3, 2.5, 2, 2, 1.5, 1, 1],
+                                                    vertical_alignment="center")
             badge = (
-                '<span class="badge-active">Active</span>'
+                ":green-badge[Active]"
                 if emp.get("status") == "Active"
-                else '<span class="badge-inactive">Inactive</span>'
+                else ":gray-badge[Inactive]"
             )
-            c1.markdown(f'<div class="emp-row-name">{emp["name"]}</div>',            unsafe_allow_html=True)
-            c2.markdown(f'<div class="emp-row-email">{emp["email"]}</div>',           unsafe_allow_html=True)
-            c3.markdown(f'<div class="emp-row-mobile">{emp.get("mobile", "")}</div>', unsafe_allow_html=True)
-            c4.markdown(f'<div class="emp-row-role">{emp["role"]}</div>',             unsafe_allow_html=True)
-            c5.markdown(badge, unsafe_allow_html=True)
+            c1.markdown(f"**{emp['name']}**")
+            c2.caption(emp["email"])
+            c3.caption(emp.get("mobile", "") or "—")
+            c4.markdown(emp["role"])
+            c5.markdown(badge)
 
             if c6.button("Edit", key=f"ebtn_{eid}", use_container_width=True):
                 st.session_state[f"emp_edit_{eid}"] = True
@@ -165,12 +141,11 @@ def _employee_table() -> None:
 
 
 def main() -> None:
-    st.markdown(CSS, unsafe_allow_html=True)
-    st.markdown("# 👥 Employees")
+    st.title("👥 Employees")
     st.markdown(
         "Central employee directory — names, emails, and roles used across all ArkPanel systems."
     )
-    st.markdown("---")
+    st.divider()
     _add_form()
     _employee_table()
 

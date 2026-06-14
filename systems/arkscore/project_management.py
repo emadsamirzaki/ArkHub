@@ -5,38 +5,18 @@ Admin view — create, edit, deactivate and reactivate projects.
 
 from __future__ import annotations
 
-import html as _html
-
 import streamlit as st
 
 from systems.arkscore.utils.constants import PM_LIST
 from systems.arkscore.utils.project_store import add_project, load_projects, update_project
-
-CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html,body,[class*="css"]{font-family:'Inter',sans-serif!important}
-
-.pm-section{
-    font-size:.75rem;font-weight:700;color:#94A3B8;
-    margin:28px 0 14px;padding-bottom:8px;
-    border-bottom:1px solid #334155;
-    text-transform:uppercase;letter-spacing:.1em;
-}
-.pm-active  {color:#22C55E;font-weight:600;font-size:.85rem;}
-.pm-inactive{color:#64748B;font-weight:600;font-size:.85rem;}
-.pm-th{font-size:.75rem;font-weight:700;color:#94A3B8;text-transform:uppercase;
-       letter-spacing:.05em;}
-</style>
-"""
+from systems.utils import ui
 
 
 def main() -> None:
-    st.markdown(CSS, unsafe_allow_html=True)
-    st.markdown("# ⚙️ Project Management")
-    st.markdown("---")
+    st.title("⚙️ Project Management")
+    st.divider()
 
-    st.markdown('<p class="pm-section">Add New Project</p>', unsafe_allow_html=True)
+    ui.section("Add New Project")
 
     with st.form("add_project_form", clear_on_submit=True):
         c1, c2, c3 = st.columns([3, 3, 2])
@@ -66,7 +46,7 @@ def main() -> None:
             st.success(f'✅ Project "{new_name.strip()}" added.')
             st.rerun()
 
-    st.markdown('<p class="pm-section">All Projects</p>', unsafe_allow_html=True)
+    ui.section("All Projects")
 
     projects = load_projects()
     if not projects:
@@ -75,8 +55,8 @@ def main() -> None:
 
     h = st.columns([3, 2, 1.5, 1.5, 2.5])
     for col, label in zip(h, ["Project Name", "PM", "Status", "Created", "Actions"]):
-        col.markdown(f'<span class="pm-th">{label}</span>', unsafe_allow_html=True)
-    st.markdown("---")
+        col.markdown(f"**{label}**")
+    st.divider()
 
     edit_id = st.session_state.get("pm_edit_id")
 
@@ -122,21 +102,17 @@ def main() -> None:
                 st.rerun()
 
         else:
-            r = st.columns([3, 2, 1.5, 1.5, 2.5])
-            name_html = _html.escape(p["name"])
+            r = st.columns([3, 2, 1.5, 1.5, 2.5], vertical_alignment="center")
+            name_md = f"**{p['name']}**"
             if p.get("retainer"):
-                name_html += (
-                    ' <span style="font-size:.68rem;font-weight:700;color:#60A5FA;'
-                    'background:#1e293b;border:1px solid #334155;border-radius:6px;'
-                    'padding:1px 6px;margin-left:6px;">🔁 RETAINER</span>'
-                )
-            r[0].markdown(name_html, unsafe_allow_html=True)
+                name_md += "　:blue-badge[🔁 Retainer]"
+            r[0].markdown(name_md)
             r[1].markdown(p["pm"])
             if p["status"] == "Active":
-                r[2].markdown('<span class="pm-active">🟢 Active</span>', unsafe_allow_html=True)
+                r[2].markdown(":green-badge[🟢 Active]")
             else:
-                r[2].markdown('<span class="pm-inactive">⚫ Inactive</span>', unsafe_allow_html=True)
-            r[3].markdown(p.get("created_at", "—"))
+                r[2].markdown(":gray-badge[⚫ Inactive]")
+            r[3].caption(p.get("created_at", "—"))
 
             a1, a2, _ = r[4].columns([1, 1.2, 0.3])
             if a1.button("✏️ Edit", key=f"edit_btn_{p['id']}"):
@@ -151,10 +127,7 @@ def main() -> None:
                     update_project(p["id"], status="Active")
                     st.rerun()
 
-        st.markdown(
-            '<hr style="margin:6px 0;border:none;border-top:1px solid #1E293B">',
-            unsafe_allow_html=True,
-        )
+        st.divider()
 
 
 main()

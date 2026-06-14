@@ -15,180 +15,23 @@ from systems.arkscore.utils.entry_store import (
 from systems.arkscore.utils.project_store import load_projects
 from systems.arkscore.utils.scorecard_store import delete_entry, get_all_weeks, get_entry, upsert_entry
 from systems.arkscore.utils.utilization_store import get_report
-from systems.arkscore.utils.constants import (
-    COLOR_BG, COLOR_CARD, COLOR_BORDER, COLOR_TEXT, COLOR_MUTED,
-)
+from systems.utils import ui
 
-st.markdown(f"""
-<style>
-.stApp {{ background-color: {COLOR_BG}; }}
-
-/* Expander styling */
-.streamlit-expanderHeader {{
-    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
-    border-radius: 12px !important;
-    border: 1px solid #334155 !important;
-    padding: 16px !important;
-    margin-bottom: 12px !important;
-}}
-
-.streamlit-expanderHeader:hover {{
-    background: linear-gradient(135deg, #334155 0%, #1E293B 100%) !important;
-    border-color: #64748B !important;
-}}
-
-.stExpanderHeader {{
-    color: {COLOR_TEXT} !important;
-    font-weight: 700 !important;
-    font-size: 1.05rem !important;
-}}
-
-/* Content inside expanders */
-.streamlit-expander {{
-    background: {COLOR_CARD} !important;
-    border: 1px solid #334155 !important;
-    border-radius: 12px !important;
-}}
-
-/* Input field styling */
-.stNumberInput > div > div > input,
-.stTextArea textarea {{
-    background-color: #0F172A !important;
-    color: #E2E8F0 !important;
-    border: 1px solid #334155 !important;
-    border-radius: 8px !important;
-    padding: 10px 12px !important;
-    font-size: 0.95rem !important;
-}}
-
-.stNumberInput > div > div > input:focus,
-.stTextArea textarea:focus {{
-    background-color: #1E293B !important;
-    border-color: #60A5FA !important;
-    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1) !important;
-}}
-
-/* Labels styling */
-.stNumberInput label,
-.stTextArea label {{
-    color: #E2E8F0 !important;
-    font-weight: 600 !important;
-    font-size: 0.95rem !important;
-    margin-bottom: 6px !important;
-}}
-
-/* Section header styling inside expanders */
-.sc-metric-label {{
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #60A5FA;
-    margin-bottom: 12px;
-    display: block;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #1E3A5F;
-}}
-
-.sc-auto-badge {{
-    display: inline-block;
-    background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 100%);
-    color: #60A5FA;
-    font-size: 0.65rem;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 99px;
-    margin-left: 8px;
-    vertical-align: middle;
-    border: 1px solid #3B82F6;
-}}
-
-.sc-auto-src {{
-    font-size: 0.75rem;
-    color: #94A3B8;
-    margin-top: 6px;
-    display: block;
-    padding: 8px 12px;
-    background: rgba(96, 165, 250, 0.05);
-    border-left: 3px solid #60A5FA;
-    border-radius: 4px;
-}}
-
-/* Section title colors with gradient effect */
-.section-bd {{ color: #3B82F6; font-weight: 700; }}
-.section-health {{ color: #10B981; font-weight: 700; }}
-.section-financial {{ color: #F59E0B; font-weight: 700; }}
-.section-people {{ color: #EC4899; font-weight: 700; }}
-.section-ops {{ color: #06B6D4; font-weight: 700; }}
-.section-ai {{ color: #8B5CF6; font-weight: 700; }}
-
-/* Button styling */
-.stFormSubmitButton > button {{
-    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%) !important;
-    color: white !important;
-    border: none !important;
-    font-weight: 700 !important;
-    font-size: 1rem !important;
-    padding: 12px 24px !important;
-    border-radius: 8px !important;
-    transition: all 0.3s ease !important;
-}}
-
-.stFormSubmitButton > button:hover {{
-    background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%) !important;
-    box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3) !important;
-}}
-
-/* Column styling */
-.stColumn {{
-    gap: 12px;
-}}
-</style>
-""", unsafe_allow_html=True)
-
-st.markdown(f"""
-<div style="background: linear-gradient(135deg, #1E3A8A 0%, #1E40AF 100%); padding: 24px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #3B82F6;">
-    <h1 style="color: #60A5FA; margin: 0 0 8px 0; font-size: 2rem;">📝 L10 Weekly Scorecard Entry</h1>
-    <p style="color: #93C5FD; margin: 0; font-size: 0.95rem;">Enter weekly metrics for the L10 leadership meeting</p>
-</div>
-""", unsafe_allow_html=True)
+st.title("📝 L10 Weekly Scorecard Entry")
+st.caption("Enter weekly metrics for the L10 leadership meeting")
+st.divider()
 
 # ── Week picker ────────────────────────────────────────────────────────────────
 today = datetime.date.today()
 last_week = today - datetime.timedelta(days=7)
 week_label = current_week_label()
 
-st.markdown("""
-<style>
-.week-picker-container {
-    background: linear-gradient(135deg, #1E3A5F 0%, #0F2A4A 100%);
-    padding: 16px 20px;
-    border-radius: 10px;
-    border: 1px solid #3B82F6;
-    margin-bottom: 20px;
-}
-.week-label {
-    color: #60A5FA;
-    font-size: 0.85rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 6px;
-}
-.week-value {
-    color: #E2E8F0;
-    font-size: 1.2rem;
-    font-weight: 700;
-}
-</style>
-<div class="week-picker-container">
-    <div class="week-label">📅 Select Week</div>
-</div>
-""", unsafe_allow_html=True)
-
+st.markdown("📅 **Select Week**")
 col_wk, col_spacer = st.columns([2, 3])
 with col_wk:
     picked_date = st.date_input("Pick any day in the week", value=last_week, label_visibility="collapsed")
     week_label = week_label_from_date(picked_date)
-    st.markdown(f'<div class="week-value">📌 {week_label}</div>', unsafe_allow_html=True)
+    st.markdown(f"📌 **{week_label}**")
 
 # Load existing saved data for this week (pre-fill form)
 existing = get_entry(week_label)
@@ -235,7 +78,7 @@ with st.form("scorecard_entry_form"):
 
     # Client Health (auto, but editable) ────────────────────────────────────────
     with st.expander("🟢 Client Health", expanded=False):
-        st.markdown(f'**#4 · Client Health % Green** <span class="sc-auto-badge">Auto</span>', unsafe_allow_html=True)
+        st.markdown("**#4 · Client Health % Green**　:blue-badge[Auto]")
 
         default_health = client_health_pct
         if default_health is None and "client_health_pct" in d:
@@ -278,7 +121,7 @@ with st.form("scorecard_entry_form"):
 
     # Operations (auto, but editable) ───────────────────────────────────────────
     with st.expander("⚙️ Operations", expanded=False):
-        st.markdown(f'**#9 · Team Utilization & Billable** <span class="sc-auto-badge">Auto</span>', unsafe_allow_html=True)
+        st.markdown("**#9 · Team Utilization & Billable**　:blue-badge[Auto]")
 
         # Calculate both metrics from utilization report (raw Clockify data)
         team_util = None
@@ -384,7 +227,7 @@ with st.form("scorecard_entry_form"):
             )
 
     # Save ──────────────────────────────────────────────────────────────────────
-    st.markdown('<div style="margin-top: 24px;"></div>', unsafe_allow_html=True)
+    st.markdown("")
     submitted = st.form_submit_button("💾  Save Scorecard Entry", use_container_width=True, type="primary")
 
 if submitted:
@@ -411,17 +254,7 @@ if submitted:
     st.success(f"Saved scorecard for **{week_label}**")
 
 # ── Saved Weeks ───────────────────────────────────────────────────────────────
-st.markdown("""
-<style>
-.sc-saved-hdr {
-    font-size: .75rem; font-weight: 700; color: #94A3B8;
-    margin: 36px 0 14px; padding-bottom: 8px;
-    border-bottom: 1px solid #334155;
-    text-transform: uppercase; letter-spacing: .1em;
-}
-</style>
-<p class="sc-saved-hdr">Saved Weeks</p>
-""", unsafe_allow_html=True)
+ui.section("Saved Weeks")
 
 saved_weeks = get_all_weeks()
 if not saved_weeks:
@@ -431,7 +264,7 @@ else:
     sh1.markdown("**Week**")
     sh2.markdown("**Submitted At**")
     sh3.markdown("")
-    st.markdown("<hr style='margin:4px 0 8px 0;border-color:#334155'>", unsafe_allow_html=True)
+    st.divider()
 
     for wk in saved_weeks:
         sc_entry = get_entry(wk)

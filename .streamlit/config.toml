@@ -1,7 +1,77 @@
+# ArkPanel theme — dual light/dark, switchable from the ⋮ → Settings menu.
+# Defaults to dark (Refined Navy). Light (Light Clarity) is the toggle-able mode.
+# Shared options live in [theme]; mode-specific colours in [theme.dark] / [theme.light].
+
 [theme]
-base                   = "dark"
-primaryColor           = "#3B82F6"
-backgroundColor        = "#0F172A"
+base = "dark"                       # default mode shown on first load
+
+# Inter, loaded natively from Google Fonts (replaces the per-page @import hack)
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+
+baseRadius        = "medium"        # rounded corners on cards, inputs, buttons
+buttonRadius      = "medium"
+showWidgetBorder  = true            # visible outlines on inputs
+showSidebarBorder = true            # separator between sidebar and content
+headingFontWeights = [800, 700, 700, 600, 600, 600]
+
+# Categorical chart palette (only valid at the [theme] level, not per-mode).
+# Mid-tones chosen to stay legible on both the dark and light backgrounds.
+chartCategoricalColors = ["#3B82F6", "#10B981", "#F59E0B", "#8B5CF6", "#EF4444", "#06B6D4", "#EC4899", "#F97316"]
+
+# ── Dark — "Refined Navy" (default) ────────────────────────────────────────────
+[theme.dark]
+primaryColor             = "#60A5FA"
+backgroundColor          = "#0F172A"
 secondaryBackgroundColor = "#1E293B"
-textColor              = "#F8FAFC"
-font                   = "sans serif"
+textColor                = "#F1F5F9"
+borderColor              = "#3D4F66"
+linkColor                = "#7CB2FF"
+
+# Semantic palette — drives :green[…]/:red[…] markdown and st.badge so status
+# colours flip with the theme automatically.
+greenColor  = "#34D399"
+orangeColor = "#FBBF24"
+yellowColor = "#FBBF24"
+redColor    = "#F87171"
+blueColor   = "#60A5FA"
+violetColor = "#A78BFA"
+grayColor   = "#A5B4CB"
+
+dataframeBorderColor           = "#3D4F66"
+dataframeHeaderBackgroundColor = "#243349"
+codeBackgroundColor            = "#0B1120"
+
+[theme.dark.sidebar]
+backgroundColor          = "#0B1120"
+secondaryBackgroundColor = "#1E293B"
+textColor                = "#E7ECF4"
+borderColor              = "#243349"
+primaryColor             = "#60A5FA"
+
+# ── Light — "Light Clarity" ─────────────────────────────────────────────────────
+[theme.light]
+primaryColor             = "#2563EB"
+backgroundColor          = "#F7F8FA"
+secondaryBackgroundColor = "#FFFFFF"
+textColor                = "#1C2433"
+borderColor              = "#D8DEE9"
+linkColor                = "#1D4ED8"
+
+greenColor  = "#15803D"
+orangeColor = "#B45309"
+yellowColor = "#B45309"
+redColor    = "#DC2626"
+blueColor   = "#2563EB"
+violetColor = "#7C3AED"
+grayColor   = "#5B6678"
+
+dataframeBorderColor           = "#D8DEE9"
+dataframeHeaderBackgroundColor = "#EEF1F6"
+codeBackgroundColor            = "#EEF1F6"
+
+[theme.light.sidebar]
+backgroundColor          = "#EEF1F6"
+secondaryBackgroundColor = "#FFFFFF"
+textColor                = "#1C2433"
+borderColor              = "#D8DEE9"
+primaryColor             = "#2563EB"

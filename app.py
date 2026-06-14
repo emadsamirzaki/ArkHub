@@ -11,35 +11,12 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Hide the built-in st.navigation sidebar; we render our own below
-st.markdown("""
-<style>
-[data-testid="stSidebarNav"] { display: none !important; }
-
-/* Section labels inside the custom sidebar */
-.sidebar-section-label {
-    font-size: 0.65rem !important;
-    font-weight: 700 !important;
-    color: #475569 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.1em !important;
-    padding: 10px 0 4px 2px !important;
-    display: block !important;
-}
-/* Top-level section labels (Company, etc.) */
-.sidebar-top-label {
-    font-size: 0.65rem !important;
-    font-weight: 700 !important;
-    color: #64748B !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.1em !important;
-    padding: 16px 0 4px 2px !important;
-    display: block !important;
-    border-top: 1px solid #1E293B !important;
-    margin-top: 4px !important;
-}
-</style>
-""", unsafe_allow_html=True)
+# Hide the built-in st.navigation sidebar; we render our own below.
+# (Fonts, colours and borders are handled by the theme in .streamlit/config.toml.)
+st.markdown(
+    '<style>[data-testid="stSidebarNav"]{display:none!important;}</style>',
+    unsafe_allow_html=True,
+)
 
 # Register all pages for URL-based routing
 pg = st.navigation(
@@ -73,33 +50,29 @@ pg = st.navigation(
 with st.sidebar:
     st.page_link("views/home.py", label="Home", icon="🏠")
 
-    st.markdown('<span class="sidebar-top-label">ArkScore</span>', unsafe_allow_html=True)
     with st.expander("📊 ArkScore", expanded=True):
         st.page_link("systems/arkscore/home.py", label="Overview", icon="📋")
 
-        st.markdown('<span class="sidebar-section-label">Scorecard</span>', unsafe_allow_html=True)
+        st.caption("Scorecard")
         st.page_link("systems/arkscore/scorecard_dashboard.py", label="L10 Scorecard", icon="🏆")
         st.page_link("systems/arkscore/scorecard_entry.py",     label="L10 Weekly Scorecard Entry",     icon="📝")
 
-        st.markdown('<span class="sidebar-section-label">Utilization</span>', unsafe_allow_html=True)
+        st.caption("Utilization")
         st.page_link("systems/arkscore/utilization_dashboard.py", label="Dashboard", icon="📊")
         st.page_link("systems/arkscore/utilization_checkin.py",   label="Check-in",  icon="📤")
 
-        st.markdown('<span class="sidebar-section-label">Operational Health</span>', unsafe_allow_html=True)
+        st.caption("Operational Health")
         st.page_link("systems/arkscore/operational_health.py",  label="Operational Health", icon="🟢")
         st.page_link("systems/arkscore/weekly_checkin.py",      label="Projects Weekly Check-in", icon="✍️")
 
-    st.markdown('<span class="sidebar-top-label">Company Management</span>', unsafe_allow_html=True)
     with st.expander("🏢 Company Management", expanded=False):
         st.page_link("systems/people/employees.py",            label="Employees", icon="👥")
         st.page_link("systems/arkscore/project_management.py", label="Project Management", icon="⚙️")
 
-    st.markdown('<span class="sidebar-top-label">Projects Hours Tracking</span>', unsafe_allow_html=True)
     with st.expander("⏱️ Projects Hours Tracking", expanded=False):
         st.page_link("systems/project_hours/home.py", label="Overview", icon="📋")
         st.page_link("systems/project_hours/hours_tracking.py", label="Hours Tracking", icon="⏱️")
 
-    st.markdown('<span class="sidebar-top-label">Workforce</span>', unsafe_allow_html=True)
     with st.expander("📍 Workforce", expanded=False):
         st.page_link("systems/people/working_patterns.py", label="Working Patterns", icon="🗓️")
         st.page_link("systems/people/availability.py",     label="Availability Now", icon="📍")

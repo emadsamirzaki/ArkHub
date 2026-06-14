@@ -5,128 +5,56 @@ Dashboard view — read-only L10 display for Operational Health.
 
 from __future__ import annotations
 
-import html as _html
-
 import pandas as pd
 import streamlit as st
 
 from systems.arkscore.utils.entry_store import delete_week_entries, get_all_weeks, get_entries_for_week
 from systems.arkscore.utils.project_store import get_active_projects
+from systems.utils import ui
 
 ON_TRACK_THRESHOLD = 85.0
 NOTE_ICONS = {"Note": "📝", "Red Flag": "🚩", "Success Story": "🏆"}
 
-CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-html,body,[class*="css"]{font-family:'Inter',sans-serif!important}
-
-.oh-section{
-    font-size:.75rem;font-weight:700;color:#94A3B8;
-    margin:28px 0 14px;padding-bottom:8px;
-    border-bottom:1px solid #334155;
-    text-transform:uppercase;letter-spacing:.1em;
-}
-.oh-hero{
-    text-align:center;padding:36px 24px;border-radius:16px;
-    background:#1E293B;border:1px solid #334155;margin-bottom:12px;
-}
-.oh-score{font-size:4.5rem;font-weight:800;line-height:1;margin:0;}
-.oh-label{font-size:1rem;margin:10px 0 4px;}
-.oh-count{font-size:.85rem;color:#64748B;margin:0;}
-.oh-alert{
-    background:#450a0a;border:1px solid #EF4444;border-radius:10px;
-    padding:12px 18px;margin-bottom:18px;color:#FCA5A5;
-    font-weight:600;font-size:.9rem;
-}
-.pcard{
-    border-radius:12px;padding:16px 18px;margin-bottom:4px;
-    border-left:5px solid;min-height:130px;
-}
-.pcard-on  {border-left-color:#22C55E;background:#0d2017;}
-.pcard-off {border-left-color:#EF4444;background:#200d0d;}
-.pcard-wait{border-left-color:#475569;background:#1E293B;}
-.pcard-title{font-size:.95rem;font-weight:700;color:#F1F5F9;margin:0 0 4px;}
-.pcard-pm   {font-size:.78rem;color:#94A3B8;margin:0 0 8px;}
-.pcard-status{font-size:.85rem;font-weight:600;margin:0;}
-.pcard-note{
-    font-size:.78rem;color:#CBD5E1;margin:8px 0 0;
-    font-style:italic;border-top:1px solid #334155;padding-top:6px;
-}
-</style>
-"""
-
-
-def _color(score: float) -> str:
-    return "#22C55E" if score >= ON_TRACK_THRESHOLD else "#EF4444"
-
 
 def _render_hero(score: float, on_count: int, total: int) -> None:
-    color = _color(score)
-    icon  = "🟢" if score >= ON_TRACK_THRESHOLD else "🔴"
-    label = "On Track" if score >= ON_TRACK_THRESHOLD else "Needs Attention"
-    st.markdown(
-        f"""
-<div class="oh-hero">
-  <p style="font-size:.7rem;font-weight:700;color:#64748B;text-transform:uppercase;
-            letter-spacing:.1em;margin:0 0 14px">Operational Health Score</p>
-  <p class="oh-score" style="color:{color};">{score:.0f}%&nbsp;{icon}</p>
-  <p class="oh-label" style="color:{color};">{label}</p>
-  <p class="oh-count">{on_count} of {total} checked-in projects on track</p>
-</div>""",
-        unsafe_allow_html=True,
-    )
-    if score < ON_TRACK_THRESHOLD:
-        st.markdown(
-            '<div class="oh-alert">⚠️ Below 85 % threshold — action required in this L10 meeting</div>',
-            unsafe_allow_html=True,
-        )
+    on_track = score >= ON_TRACK_THRESHOLD
+    with st.container(border=True):
+        c1, c2 = st.columns([1, 2], vertical_alignment="center")
+        with c1:
+            st.metric("Operational Health Score", f"{score:.0f}%")
+        with c2:
+            if on_track:
+                st.markdown("### :green[🟢 On Track]")
+            else:
+                st.markdown("### :red[🔴 Needs Attention]")
+            st.caption(f"{on_count} of {total} checked-in projects on track")
+    if not on_track:
+        st.error("⚠️ Below 85% threshold — action required in this L10 meeting")
 
 
 def _project_card(project: dict, entry: dict | None) -> None:
-    name = _html.escape(project["name"])
-    pm   = _html.escape(project["pm"])
+    name = project["name"]
+    pm   = project["pm"]
 
-    if entry is None:
-        st.markdown(
-            f"""<div class="pcard pcard-wait">
-  <p class="pcard-title">⏳ {name}</p>
-  <p class="pcard-pm">PM: {pm}</p>
-  <p class="pcard-status" style="color:#64748B;">Awaiting check-in</p>
-</div>""",
-            unsafe_allow_html=True,
-        )
-        return
+    with st.container(border=True):
+        if entry is None:
+            st.markdown(f"**⏳ {name}**")
+            st.caption(f"PM: {pm}")
+            st.markdown(":gray-badge[Awaiting check-in]")
+            return
 
-    on_track     = entry["health_status"] == "On Track"
-    cls          = "pcard-on" if on_track else "pcard-off"
-    icon         = "🟢" if on_track else "🔴"
-    status_color = "#22C55E" if on_track else "#EF4444"
+        st.markdown(f"**{name}**")
+        st.caption(f"PM: {pm}")
+        st.markdown(ui.status_badge(entry["health_status"]))
 
-    note_html = ""
-    if entry.get("note_type") and entry.get("note_text"):
-        n_icon    = NOTE_ICONS.get(entry["note_type"], "📝")
-        note_type = _html.escape(entry["note_type"])
-        note_text = _html.escape(entry["note_text"])
-        note_html = (
-            f'<p class="pcard-note">{n_icon} <strong>{note_type}:</strong> {note_text}</p>'
-        )
-
-    st.markdown(
-        f"""<div class="pcard {cls}">
-  <p class="pcard-title">{icon} {name}</p>
-  <p class="pcard-pm">PM: {pm}</p>
-  <p class="pcard-status" style="color:{status_color};">{_html.escape(entry['health_status'])}</p>
-  {note_html}
-</div>""",
-        unsafe_allow_html=True,
-    )
+        if entry.get("note_type") and entry.get("note_text"):
+            n_icon = NOTE_ICONS.get(entry["note_type"], "📝")
+            st.caption(f"{n_icon} **{entry['note_type']}:** {entry['note_text']}")
 
 
 def main() -> None:
-    st.markdown(CSS, unsafe_allow_html=True)
-    st.markdown("# 📊 Operational Health")
-    st.markdown("---")
+    st.title("📊 Operational Health")
+    st.divider()
 
     projects  = get_active_projects()
     all_weeks = get_all_weeks()
@@ -186,13 +114,13 @@ def main() -> None:
         st.warning("No active projects. Add them in **Project Management**.")
         return
 
-    st.markdown('<p class="oh-section">Project Status</p>', unsafe_allow_html=True)
+    ui.section("Project Status")
     cols = st.columns(3)
     for i, project in enumerate(projects):
         with cols[i % 3]:
             _project_card(project, entry_by_project.get(project["id"]))
 
-    st.markdown('<p class="oh-section">Summary</p>', unsafe_allow_html=True)
+    ui.section("Summary")
 
     rows = []
     for p in projects:

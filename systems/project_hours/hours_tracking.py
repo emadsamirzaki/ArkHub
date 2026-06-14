@@ -7,13 +7,14 @@ from __future__ import annotations
 
 from datetime import date
 
+import pandas as pd
 import streamlit as st
 
 from systems.arkscore.utils.project_store import get_retainer_projects
 from systems.project_hours.utils import clockify
 from systems.project_hours.utils.calc import month_keys, month_label, summarize
 from systems.project_hours.utils.constants import (
-    STATUS_COLORS,
+    STATUS_COLOR_NAMES,
     STATUS_ICONS,
     TOLERANCE,
 )
@@ -22,28 +23,7 @@ from systems.project_hours.utils.contract_store import (
     get_contract,
     upsert_contract,
 )
-
-CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-html,body,[class*="css"]{font-family:'Inter',sans-serif!important}
-
-.ph-section{
-    font-size:.78rem;font-weight:700;color:#94A3B8;
-    margin:30px 0 14px;padding-bottom:8px;
-    border-bottom:1px solid #334155;
-    text-transform:uppercase;letter-spacing:.1em;
-}
-.metric-card{
-    background:#1E293B;border-radius:14px;padding:18px 16px;text-align:center;
-    border:1px solid #334155;min-height:104px;margin-bottom:8px;
-}
-.metric-label{color:#94A3B8;font-size:.7rem;text-transform:uppercase;
-    letter-spacing:.1em;font-weight:600;margin:0 0 8px;}
-.metric-value{font-size:1.9rem;font-weight:700;margin:0;line-height:1.1;}
-.metric-sub{color:#64748B;font-size:.74rem;margin:6px 0 0;}
-</style>
-"""
+from systems.utils import ui
 
 PER_ROW = 6
 
@@ -52,73 +32,46 @@ def _fmt(n: float) -> str:
     return f"{n:,.0f}" if abs(n - round(n)) < 0.05 else f"{n:,.1f}"
 
 
-def _metric_card(label: str, value: str, sub: str = "", color: str = "#F8FAFC") -> None:
-    sub_html = f'<p class="metric-sub">{sub}</p>' if sub else ""
-    st.markdown(
-        f"""<div class="metric-card">
-  <p class="metric-label">{label}</p>
-  <p class="metric-value" style="color:{color};">{value}</p>
-  {sub_html}
-</div>""",
-        unsafe_allow_html=True,
-    )
-
-
 def _pace_hero(s: dict) -> None:
     status = s["pace_status"]
-    color  = STATUS_COLORS.get(status, "#94A3B8")
+    color  = STATUS_COLOR_NAMES.get(status, "gray")
     icon   = STATUS_ICONS.get(status, "")
     var    = s["variance"]
     sign   = "+" if var >= 0 else "−"
-    st.markdown(
-        f"""<div style="background:#1E293B;border:1px solid #334155;border-left:6px solid {color};
-            border-radius:12px;padding:20px 24px;margin-bottom:8px;">
-  <span style="font-size:.7rem;font-weight:700;color:#64748B;text-transform:uppercase;
-               letter-spacing:.1em;">Burn Pace</span>
-  <p style="font-size:1.8rem;font-weight:800;color:{color};margin:6px 0 2px;">{icon} {status}</p>
-  <p style="font-size:.88rem;color:#CBD5E1;margin:0;">
-    {_fmt(s['burned_to_date'])} h burned vs {_fmt(s['expected_to_date'])} h expected after
-    {s['months_completed']} of {s['total_months']} months
-    &nbsp;·&nbsp;<b style="color:{color};">{sign}{_fmt(abs(var))} h</b>
-  </p>
-</div>""",
-        unsafe_allow_html=True,
-    )
+    with st.container(border=True):
+        st.caption("BURN PACE")
+        st.markdown(f"### :{color}[{icon} {status}]")
+        st.markdown(
+            f"{_fmt(s['burned_to_date'])} h burned vs {_fmt(s['expected_to_date'])} h expected "
+            f"after {s['months_completed']} of {s['total_months']} months　·　"
+            f":{color}[**{sign}{_fmt(abs(var))} h**]"
+        )
 
 
 def _month_table(per_month: list[dict]) -> None:
-    body = ""
-    for m in per_month:
-        color = STATUS_COLORS.get(m["status"], "#94A3B8")
-        icon  = STATUS_ICONS.get(m["status"], "")
-        body += (
-            "<tr>"
-            f"<td style='padding:6px 14px'>{m['label']}</td>"
-            f"<td style='padding:6px 14px;text-align:right'>{_fmt(m['burned'])} h</td>"
-            f"<td style='padding:6px 14px;text-align:right;color:#64748B'>{_fmt(m['avg_monthly'])} h</td>"
-            f"<td style='padding:6px 14px;text-align:center;color:{color};font-weight:600'>"
-            f"{icon} {m['status']}</td>"
-            "</tr>"
-        )
-    st.markdown(
-        f"""<table style='width:100%;border-collapse:collapse;font-size:.88rem;
-                          font-family:Inter,sans-serif;color:#E2E8F0;'>
-  <thead><tr style='border-bottom:1px solid #334155;color:#94A3B8;font-size:.72rem;
-                    text-transform:uppercase;letter-spacing:.05em;'>
-    <th style='padding:6px 14px;text-align:left'>Month</th>
-    <th style='padding:6px 14px;text-align:right'>Burned</th>
-    <th style='padding:6px 14px;text-align:right'>Avg / Month</th>
-    <th style='padding:6px 14px;text-align:center'>Status</th>
-  </tr></thead>
-  <tbody>{body}</tbody>
-</table>""",
-        unsafe_allow_html=True,
+    df = pd.DataFrame([
+        {
+            "Month":       m["label"],
+            "Burned":      round(m["burned"], 1),
+            "Avg / Month": round(m["avg_monthly"], 1),
+            "Status":      f"{STATUS_ICONS.get(m['status'], '')} {m['status']}",
+        }
+        for m in per_month
+    ])
+    st.dataframe(
+        df,
+        column_config={
+            "Burned":      st.column_config.NumberColumn("Burned", format="%.1f h"),
+            "Avg / Month": st.column_config.NumberColumn("Avg / Month", format="%.1f h"),
+        },
+        use_container_width=True,
+        hide_index=True,
     )
 
 
 def _clockify_sync_section(project_id: str, project_name: str,
                            contract: dict, keys: list[str]) -> None:
-    st.markdown('<p class="ph-section">Clockify Sync</p>', unsafe_allow_html=True)
+    ui.section("Clockify Sync")
 
     if not clockify.is_configured():
         st.info(
@@ -145,14 +98,13 @@ def _clockify_sync_section(project_id: str, project_name: str,
     default_id = stored or auto
     idx = options.index(default_id) if default_id in options else 0
 
-    c1, c2 = st.columns([3, 1])
+    c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
     with c1:
         sel_cid = st.selectbox(
             "Clockify project", options, index=idx,
             format_func=lambda i: names[i], key=f"cf_proj_{project_id}",
         )
     with c2:
-        st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
         do_sync = st.button("🔄 Sync from Clockify", type="primary", key=f"cf_sync_{project_id}")
 
     if stored:
@@ -185,9 +137,8 @@ def _clockify_sync_section(project_id: str, project_name: str,
 
 
 def main() -> None:
-    st.markdown(CSS, unsafe_allow_html=True)
-    st.markdown("# ⏱️ Hours Tracking")
-    st.markdown("---")
+    st.title("⏱️ Hours Tracking")
+    st.divider()
 
     projects = get_retainer_projects()
     if not projects:
@@ -208,7 +159,7 @@ def main() -> None:
     contract = get_contract(sel_id)
 
     # ── Contract setup ───────────────────────────────────────────────────────--
-    st.markdown('<p class="ph-section">Contract</p>', unsafe_allow_html=True)
+    ui.section("Contract")
     today = date.today()
     def_from = date.fromisoformat(contract["from_date"]) if contract else date(today.year, 1, 1)
     def_to   = date.fromisoformat(contract["to_date"])   if contract else date(today.year, 12, 31)
@@ -255,7 +206,7 @@ def main() -> None:
     _clockify_sync_section(sel_id, labels[sel_id], contract, keys)
 
     # ── Monthly hours entry ──────────────────────────────────────────────────--
-    st.markdown('<p class="ph-section">Monthly Burned Hours</p>', unsafe_allow_html=True)
+    ui.section("Monthly Burned Hours")
     st.caption("Synced from Clockify when available — edit any month to override.")
     # `updated_at` changes on every save/sync; folding it into the widget keys
     # forces the inputs to re-read freshly synced values instead of stale state.
@@ -290,34 +241,30 @@ def main() -> None:
     # ── Breakdown ──────────────────────────────────────────────────────────────
     s = summarize(contract)
 
-    st.markdown('<p class="ph-section">Burn-down</p>', unsafe_allow_html=True)
+    ui.section("Burn-down")
     _pace_hero(s)
+    st.markdown("")
 
-    var_color = STATUS_COLORS.get(s["pace_status"], "#F8FAFC")
     r1 = st.columns(3)
-    with r1[0]:
-        _metric_card("Avg / Month Target", f"{_fmt(s['avg_monthly'])} h",
-                     f"{_fmt(s['total_hours'])} h ÷ {s['total_months']} months")
-    with r1[1]:
-        _metric_card("Burned to Date", f"{_fmt(s['burned_to_date'])} h",
-                     f"of {_fmt(s['total_hours'])} h total")
-    with r1[2]:
-        _metric_card("Variance vs Expected", f"{'+' if s['variance'] >= 0 else '−'}{_fmt(abs(s['variance']))} h",
-                     f"expected {_fmt(s['expected_to_date'])} h by now", var_color)
+    r1[0].metric("Avg / Month Target", f"{_fmt(s['avg_monthly'])} h",
+                 help=f"{_fmt(s['total_hours'])} h ÷ {s['total_months']} months", border=True)
+    r1[1].metric("Burned to Date", f"{_fmt(s['burned_to_date'])} h",
+                 help=f"of {_fmt(s['total_hours'])} h total", border=True)
+    r1[2].metric("Variance vs Expected",
+                 f"{'+' if s['variance'] >= 0 else '−'}{_fmt(abs(s['variance']))} h",
+                 help=f"expected {_fmt(s['expected_to_date'])} h by now", border=True)
 
     r2 = st.columns(3)
-    with r2[0]:
-        _metric_card("Hours Remaining", f"{_fmt(s['remaining_hours'])} h",
-                     f"{s['remaining_months']} months left")
-    with r2[1]:
-        need = s["projected_monthly_needed"]
-        _metric_card("Needed / Month", f"{_fmt(need)} h" if s["remaining_months"] > 0 else "—",
-                     "to finish on time" if s["remaining_months"] > 0 else "contract complete")
-    with r2[2]:
-        pct = (s["burned_to_date"] / s["total_hours"] * 100) if s["total_hours"] else 0.0
-        _metric_card("Budget Used", f"{pct:.0f}%", "of contracted hours")
+    r2[0].metric("Hours Remaining", f"{_fmt(s['remaining_hours'])} h",
+                 help=f"{s['remaining_months']} months left", border=True)
+    need = s["projected_monthly_needed"]
+    r2[1].metric("Needed / Month", f"{_fmt(need)} h" if s["remaining_months"] > 0 else "—",
+                 help="to finish on time" if s["remaining_months"] > 0 else "contract complete",
+                 border=True)
+    pct = (s["burned_to_date"] / s["total_hours"] * 100) if s["total_hours"] else 0.0
+    r2[2].metric("Budget Used", f"{pct:.0f}%", help="of contracted hours", border=True)
 
-    st.markdown('<p class="ph-section">Month-by-Month</p>', unsafe_allow_html=True)
+    ui.section("Month-by-Month")
     st.caption(f"A month is *in range* within ±{int(TOLERANCE * 100)}% of the monthly average "
                f"({_fmt(s['avg_monthly'])} h). Future months show as ⚪ Upcoming.")
     _month_table(s["per_month"])

@@ -18,53 +18,41 @@ from systems.arkscore.utils.entry_store import (
     week_label_from_date,
 )
 from systems.arkscore.utils.project_store import get_active_projects
+from systems.utils import ui
 
 STATUS_OPTIONS = ["—", "On Track", "Off Track"]
 NOTE_OPTIONS   = ["—", "Note", "Red Flag", "Success Story"]
 
-CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html,body,[class*="css"]{font-family:'Inter',sans-serif!important}
-
-.ci-section{
-    font-size:.75rem;font-weight:700;color:#94A3B8;
-    margin:28px 0 14px;padding-bottom:8px;
-    border-bottom:1px solid #334155;
-    text-transform:uppercase;letter-spacing:.1em;
-}
-.ci-th{
-    font-size:.7rem;font-weight:700;color:#64748B;
-    text-transform:uppercase;letter-spacing:.08em;
-    padding-bottom:4px;
-}
-.ci-proj-name{font-size:.9rem;font-weight:600;color:#F1F5F9;line-height:1.8;}
-.ci-proj-pm  {font-size:.75rem;color:#64748B;padding-top:10px;}
-.ci-submitted{font-size:.9rem;color:#22C55E;padding-top:8px;}
-</style>
-"""
-
 
 def _init_for_week(projects: list[dict], week_label: str) -> None:
-    if st.session_state.get("ci_week") == week_label:
-        return
-    for k in list(st.session_state.keys()):
-        if k.startswith("ci_") and k != "ci_week":
-            del st.session_state[k]
-    st.session_state["ci_week"] = week_label
+    # When the week changes, drop the previous week's field state so it doesn't
+    # leak across weeks.
+    if st.session_state.get("ci_week") != week_label:
+        for k in list(st.session_state.keys()):
+            if k.startswith(("ci_status_", "ci_note_type_", "ci_note_text_")):
+                del st.session_state[k]
+        st.session_state["ci_week"] = week_label
+
+    # Populate any field whose widget state is missing from the saved entry.
+    # This covers a fresh load, a week switch, AND returning to the page after
+    # navigating away (Streamlit garbage-collects widget keys for pages that
+    # aren't rendered, while the plain `ci_week` key survives — so we can't rely
+    # on the week alone to decide whether the fields need (re)loading). Fields
+    # already present are left untouched so in-progress edits survive reruns.
     for p in projects:
-        pid      = p["id"]
+        pid = p["id"]
+        if f"ci_status_{pid}" in st.session_state:
+            continue
         existing = get_entry(pid, week_label)
         if existing:
             saved_status = existing["health_status"]
             st.session_state[f"ci_status_{pid}"]    = saved_status if saved_status in STATUS_OPTIONS else "—"
-            nt = existing.get("note_type")
-            st.session_state[f"ci_note_type_{pid}"] = nt if nt else "—"
+            st.session_state[f"ci_note_type_{pid}"] = existing.get("note_type") or "—"
             st.session_state[f"ci_note_text_{pid}"] = existing.get("note_text") or ""
         else:
-            st.session_state.setdefault(f"ci_status_{pid}",    "—")
-            st.session_state.setdefault(f"ci_note_type_{pid}", "—")
-            st.session_state.setdefault(f"ci_note_text_{pid}", "")
+            st.session_state[f"ci_status_{pid}"]    = "—"
+            st.session_state[f"ci_note_type_{pid}"] = "—"
+            st.session_state[f"ci_note_text_{pid}"] = ""
 
 
 _SKIPPED = object()  # sentinel: status not set, skip silently
@@ -87,9 +75,8 @@ def _save_one(pid: str, week_label: str):
 
 
 def main() -> None:
-    st.markdown(CSS, unsafe_allow_html=True)
-    st.markdown("# ✍️ Projects Weekly Check-in")
-    st.markdown("---")
+    st.title("✍️ Projects Weekly Check-in")
+    st.divider()
 
     projects = get_active_projects()
     if not projects:
@@ -100,7 +87,7 @@ def main() -> None:
         return
 
     # ── Week picker ───────────────────────────────────────────────────────────
-    col_wk, col_lbl, _ = st.columns([2, 4, 2])
+    col_wk, col_lbl = st.columns([2, 4], vertical_alignment="bottom")
     with col_wk:
         last_week = _date.today() - timedelta(days=7)
         picked = st.date_input(
@@ -110,45 +97,30 @@ def main() -> None:
         )
     week_label = week_label_from_date(picked)
     with col_lbl:
-        st.markdown(
-            f"<div style='padding-top:28px;font-size:.9rem;font-weight:600;"
-            f"color:#94A3B8;'>{week_label}</div>",
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"**{week_label}**")
     _init_for_week(projects, week_label)
 
     # ── Check-in table ────────────────────────────────────────────────────────
-    st.markdown(
-        f'<p class="ci-section">Check-ins for {week_label}</p>',
-        unsafe_allow_html=True,
-    )
+    ui.section(f"Check-ins for {week_label}")
 
     th1, th2, th3, th4, th5, th6 = st.columns([2.5, 1.5, 2, 2, 3.5, 0.5])
-    th1.markdown('<div class="ci-th">Project</div>',   unsafe_allow_html=True)
-    th2.markdown('<div class="ci-th">PM</div>',        unsafe_allow_html=True)
-    th3.markdown('<div class="ci-th">Status</div>',    unsafe_allow_html=True)
-    th4.markdown('<div class="ci-th">Note Type</div>', unsafe_allow_html=True)
-    th5.markdown('<div class="ci-th">Note</div>',      unsafe_allow_html=True)
+    th1.markdown("**Project**")
+    th2.markdown("**PM**")
+    th3.markdown("**Status**")
+    th4.markdown("**Note Type**")
+    th5.markdown("**Note**")
     th6.markdown("")
-    st.markdown(
-        "<hr style='margin:2px 0 10px 0;border-color:#334155'>",
-        unsafe_allow_html=True,
-    )
+    st.divider()
 
     for p in projects:
         pid       = p["id"]
         has_entry = get_entry(pid, week_label) is not None
 
-        c1, c2, c3, c4, c5, c6 = st.columns([2.5, 1.5, 2, 2, 3.5, 0.5])
+        c1, c2, c3, c4, c5, c6 = st.columns([2.5, 1.5, 2, 2, 3.5, 0.5],
+                                            vertical_alignment="center")
 
-        c1.markdown(
-            f'<div class="ci-proj-name">{p["name"]}</div>',
-            unsafe_allow_html=True,
-        )
-        c2.markdown(
-            f'<div class="ci-proj-pm">{p["pm"]}</div>',
-            unsafe_allow_html=True,
-        )
+        c1.markdown(f"**{p['name']}**")
+        c2.caption(p["pm"])
 
         c3.selectbox(
             "status", STATUS_OPTIONS,
@@ -172,12 +144,9 @@ def main() -> None:
             )
 
         if has_entry:
-            c6.markdown(
-                '<div class="ci-submitted">✅</div>',
-                unsafe_allow_html=True,
-            )
+            c6.markdown("✅")
 
-    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown("")
     if st.button("💾 Save All", type="primary"):
         errors: list[str] = []
         saved = 0
@@ -200,7 +169,7 @@ def main() -> None:
             st.info("No statuses set — select On Track or Off Track for at least one project.")
 
     # ── Saved Weeks ───────────────────────────────────────────────────────────
-    st.markdown('<p class="ci-section">Saved Weeks</p>', unsafe_allow_html=True)
+    ui.section("Saved Weeks")
 
     all_weeks = get_all_weeks()
     if not all_weeks:
@@ -213,10 +182,7 @@ def main() -> None:
     sh2.markdown("**Last Updated**")
     sh3.markdown("**Entries**")
     sh4.markdown("")
-    st.markdown(
-        "<hr style='margin:4px 0 8px 0;border-color:#334155'>",
-        unsafe_allow_html=True,
-    )
+    st.divider()
 
     for wk in all_weeks:
         entries   = get_entries_for_week(wk)

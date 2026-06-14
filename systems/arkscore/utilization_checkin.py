@@ -24,23 +24,7 @@ from systems.project_hours.utils.clockify import (
     get_active_workspace_id,
     is_configured,
 )
-
-# ── CSS ───────────────────────────────────────────────────────────────────────
-st.markdown(
-    """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
-.section-heading {
-    font-size: 0.8rem; font-weight: 700; color: #94A3B8;
-    margin: 32px 0 14px 0; padding-bottom: 8px;
-    border-bottom: 1px solid #334155;
-    text-transform: uppercase; letter-spacing: 0.1em;
-}
-</style>
-""",
-    unsafe_allow_html=True,
-)
+from systems.utils import ui
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -58,13 +42,13 @@ def _save_df(df: pd.DataFrame, week_label: str, sunday, thursday) -> None:
 
 
 def main() -> None:
-    st.markdown("# 📤 Utilization Weekly Check-in")
+    st.title("📤 Utilization Weekly Check-in")
     st.markdown("Fetch this week's time entries directly from Clockify to save utilization data.")
-    st.markdown("---")
+    st.divider()
 
-    st.markdown('<p class="section-heading">Fetch from Clockify</p>', unsafe_allow_html=True)
+    ui.section("Fetch from Clockify")
 
-    col_wk, col_lbl, _ = st.columns([2, 4, 2])
+    col_wk, col_lbl = st.columns([2, 4], vertical_alignment="bottom")
     with col_wk:
         last_week = date.today() - timedelta(days=7)
         picked = st.date_input(
@@ -75,11 +59,7 @@ def main() -> None:
     week_label = week_label_from_date(picked)
     sunday, thursday = week_bounds(picked)
     with col_lbl:
-        st.markdown(
-            f"<div style='padding-top:28px;font-size:.9rem;font-weight:600;"
-            f"color:#94A3B8;'>{week_label}</div>",
-            unsafe_allow_html=True,
-        )
+        st.markdown(f"**{week_label}**")
 
     # ── Clockify API fetch ────────────────────────────────────────────────────
     if not is_configured():
@@ -143,7 +123,7 @@ def main() -> None:
                 st.switch_page("systems/arkscore/utilization_dashboard.py")
 
     # ── Saved weeks table ──────────────────────────────────────────────────────
-    st.markdown('<p class="section-heading">Saved Weeks</p>', unsafe_allow_html=True)
+    ui.section("Saved Weeks")
 
     all_reports = get_all_reports()
     if not all_reports:
@@ -157,7 +137,7 @@ def main() -> None:
     h4.markdown("**Hours**")
     h5.markdown("")
     h6.markdown("")
-    st.markdown("<hr style='margin:4px 0 8px 0;border-color:#334155'>", unsafe_allow_html=True)
+    st.divider()
 
     for rep in all_reports:
         label   = rep["week_label"]

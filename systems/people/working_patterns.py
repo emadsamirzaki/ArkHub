@@ -15,6 +15,7 @@ from systems.people.utils.pattern_store import (
     total_hours,
     upsert_pattern,
 )
+from systems.utils import ui
 
 
 def to_12h(t: str) -> str:
@@ -33,25 +34,6 @@ DAY_LABELS = {
 
 LOCATION_OPTIONS = ["home", "office", "away"]
 LOCATION_LABELS  = {"home": "🏠 Home", "office": "🏢 Office", "away": "☕ Away / Break"}
-
-CSS = """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
-
-.section-heading {
-    font-size: 0.75rem; font-weight: 700; color: #94A3B8;
-    margin: 28px 0 14px 0; padding-bottom: 8px;
-    border-bottom: 1px solid #334155;
-    text-transform: uppercase; letter-spacing: 0.1em;
-}
-.day-hours {
-    font-size: 0.8rem; color: #64748B; margin-top: 6px;
-}
-.hours-ok   { color: #86EFAC; }
-.hours-warn { color: #FCD34D; }
-</style>
-"""
 
 
 def _slot_key(emp_id: str, day: str) -> str:
@@ -132,19 +114,14 @@ def _render_day_tab(emp_id: str, day: str) -> None:
         st.rerun()
 
     hrs = total_hours(slots)
-    colour = "hours-ok" if hrs >= 7 else "hours-warn"
-    st.markdown(
-        f'<div class="day-hours">Total working hours: '
-        f'<span class="{colour}"><b>{hrs:.1f} h</b></span></div>',
-        unsafe_allow_html=True,
-    )
+    colour = "green" if hrs >= 7 else "orange"
+    st.markdown(f"Total working hours: :{colour}[**{hrs:.1f} h**]")
 
 
 def main() -> None:
-    st.markdown(CSS, unsafe_allow_html=True)
-    st.markdown("# 🗓️ Working Patterns")
+    st.title("🗓️ Working Patterns")
     st.markdown("Define each employee's weekly schedule — days, hours, and location per slot.")
-    st.markdown("---")
+    st.divider()
 
     employees = get_active_employees()
     if not employees:
@@ -164,10 +141,7 @@ def main() -> None:
 
     _load_slots_into_state(emp_id)
 
-    st.markdown(
-        f'<p class="section-heading">Weekly Schedule — {emp["name"]} ({emp["role"]})</p>',
-        unsafe_allow_html=True,
-    )
+    ui.section(f"Weekly Schedule — {emp['name']} ({emp['role']})")
 
     tabs = st.tabs([DAY_LABELS[d] for d in DAYS])
     for tab, day in zip(tabs, DAYS):
