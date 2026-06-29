@@ -53,6 +53,18 @@ def get_all_week_labels() -> list[str]:
 
 
 @st.cache_data(ttl=60)
+def get_all_clockify_users() -> list[str]:
+    """Return sorted unique User names seen across all stored utilization reports."""
+    users: set[str] = set()
+    for report in get_all_reports():
+        for row in report["raw_rows"]:
+            user = str(row.get("User") or "").strip()
+            if user:
+                users.add(user)
+    return sorted(users)
+
+
+@st.cache_data(ttl=60)
 def get_report(week_label: str) -> dict | None:
     with db_cursor() as cur:
         cur.execute(

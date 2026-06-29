@@ -14,11 +14,13 @@ from systems.arkscore.utils.constants import (
     COLOR_ON_TARGET,
     COLOR_WATCH,
     ON_TARGET_THRESHOLD,
+    STATUS_CRITICAL,
     TARGET_HOURS,
     WATCH_THRESHOLD,
 )
 from systems.arkscore.utils.parse_clockify import calculate_utilization, get_project_breakdown
 from systems.arkscore.utils.utilization_store import get_all_reports, get_all_week_labels, get_report
+from systems.people.utils.employee_store import get_active_employees
 from systems.utils import ui
 
 
@@ -75,9 +77,10 @@ def _df_from_store(report: dict) -> pd.DataFrame:
     return df
 
 
-def _wow_table(util_now: pd.DataFrame, report_prev: dict) -> None:
+def _wow_table(util_now: pd.DataFrame, report_prev: dict, name_map: dict) -> None:
     df_prev   = _df_from_store(report_prev)
     util_prev = calculate_utilization(df_prev)
+    util_prev["Name"] = util_prev["Name"].map(lambda n: name_map.get(n, n))
     prev_map  = {r["Name"]: r["Utilization %"] for _, r in util_prev.iterrows()}
 
     rows = []
@@ -152,6 +155,52 @@ def main() -> None:
     if len(util_df) == 0:
         st.warning("No team members found in this report.")
         return
+
+    # ── Employee name mapping + zero-hour injection ───────────────────────────
+    active_employees = get_active_employees()
+    name_map = {
+        (emp.get("clockify_name") or "").strip() or emp["name"]: emp["name"]
+        for emp in active_employees
+    }
+
+    # Capture orphan Clockify names before renaming
+    original_clockify_names = set(util_df["Name"].tolist())
+    orphan_clockify = original_clockify_names - set(name_map.keys())
+
+    # Rename Clockify names to canonical employee names
+    util_df["Name"] = util_df["Name"].map(lambda n: name_map.get(n, n))
+
+    # Inject zero rows for active employees absent from Clockify this week
+    matched_names = set(util_df["Name"].tolist())
+    zero_rows = [
+        {
+            "Name":           emp["name"],
+            "Total Hrs":      0.0,
+            "Billable Hrs":   0.0,
+            "Non-Bill Hrs":   0.0,
+            "Utilization %":  0.0,
+            "Billable %":     0.0,
+            "Non-Billable %": 0.0,
+            "Status":         STATUS_CRITICAL,
+        }
+        for emp in active_employees
+        if emp["name"] not in matched_names
+    ]
+    if zero_rows:
+        util_df = (
+            pd.concat([util_df.drop(columns=["Rank"]), pd.DataFrame(zero_rows)], ignore_index=True)
+            .sort_values("Utilization %", ascending=False)
+            .reset_index(drop=True)
+        )
+        util_df.insert(0, "Rank", range(1, len(util_df) + 1))
+
+    # Warn about Clockify users not matched to any employee
+    if orphan_clockify:
+        st.warning(
+            f"⚠️ {len(orphan_clockify)} Clockify user(s) not matched to any employee: "
+            + ", ".join(f"**{n}**" for n in sorted(orphan_clockify))
+            + " — go to **People → Employees** and set their Clockify Name."
+        )
 
     # ── Aggregates ────────────────────────────────────────────────────────────
     total_hrs    = float(df["Duration (decimal)"].sum())
@@ -249,7 +298,7 @@ def main() -> None:
             prev_report = prev_reports[0]
             ui.section("Week-over-Week Comparison")
             st.caption(f"vs {prev_report['week_label']}")
-            _wow_table(util_df, prev_report)
+            _wow_table(util_df, prev_report, name_map)
 
 
 main()

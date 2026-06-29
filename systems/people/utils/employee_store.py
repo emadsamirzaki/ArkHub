@@ -17,7 +17,7 @@ from systems.utils.db import db_cursor
 def load_employees() -> list[dict]:
     with db_cursor() as cur:
         cur.execute(
-            "SELECT id, name, email, mobile, role, status, created_at FROM employees ORDER BY created_at"
+            "SELECT id, name, email, mobile, role, status, clockify_name, created_at FROM employees ORDER BY created_at"
         )
         return [dict(row) for row in cur.fetchall()]
 
@@ -27,10 +27,10 @@ def save_employees(employees: list[dict]) -> None:
         cur.execute("DELETE FROM employees")
         for e in employees:
             cur.execute(
-                "INSERT INTO employees (id, name, email, mobile, role, status, created_at)"
-                " VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                "INSERT INTO employees (id, name, email, mobile, role, status, clockify_name, created_at)"
+                " VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
                 (e["id"], e["name"], e["email"], e.get("mobile", ""),
-                 e["role"], e["status"], e["created_at"]),
+                 e["role"], e["status"], e.get("clockify_name", ""), e["created_at"]),
             )
     load_employees.clear()
 
@@ -43,16 +43,17 @@ def get_active_employees() -> list[dict]:
     return [e for e in load_employees() if e.get("status") == "Active"]
 
 
-def add_employee(name: str, email: str, role: str, mobile: str = "") -> dict:
+def add_employee(name: str, email: str, role: str, mobile: str = "", clockify_name: str = "") -> dict:
     employees = load_employees()
     emp: dict = {
-        "id":         str(uuid.uuid4()),
-        "name":       name.strip(),
-        "email":      email.strip().lower(),
-        "mobile":     mobile.strip(),
-        "role":       role.strip(),
-        "status":     "Active",
-        "created_at": date.today().isoformat(),
+        "id":            str(uuid.uuid4()),
+        "name":          name.strip(),
+        "email":         email.strip().lower(),
+        "mobile":        mobile.strip(),
+        "role":          role.strip(),
+        "status":        "Active",
+        "clockify_name": clockify_name.strip(),
+        "created_at":    date.today().isoformat(),
     }
     employees.append(emp)
     save_employees(employees)

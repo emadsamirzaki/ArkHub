@@ -17,14 +17,16 @@ import streamlit as st
 
 _DDL = """
 CREATE TABLE IF NOT EXISTS employees (
-    id         TEXT PRIMARY KEY,
-    name       TEXT NOT NULL,
-    email      TEXT NOT NULL,
-    mobile     TEXT NOT NULL DEFAULT '',
-    role       TEXT NOT NULL,
-    status     TEXT NOT NULL DEFAULT 'Active',
-    created_at TEXT NOT NULL
+    id            TEXT PRIMARY KEY,
+    name          TEXT NOT NULL,
+    email         TEXT NOT NULL,
+    mobile        TEXT NOT NULL DEFAULT '',
+    role          TEXT NOT NULL,
+    status        TEXT NOT NULL DEFAULT 'Active',
+    created_at    TEXT NOT NULL
 );
+
+ALTER TABLE employees ADD COLUMN IF NOT EXISTS clockify_name TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS working_patterns (
     employee_id TEXT PRIMARY KEY,
