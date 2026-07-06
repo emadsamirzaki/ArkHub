@@ -159,10 +159,11 @@ def _month_range_iso(month_key: str) -> tuple[str, str]:
 
 
 def _summary_totals(workspace_id: str, project_ids: list[str], start_iso: str, end_iso: str) -> dict:
-    """POST a summary report filtered to one or more projects; return the totals[0] dict (or {})."""
+    """POST a summary report filtered to one or more projects, billable entries only."""
     body = {
         "dateRangeStart": start_iso,
         "dateRangeEnd":   end_iso,
+        "billable":       True,
         "summaryFilter":  {"groups": ["PROJECT"]},
         "projects":       {"ids": project_ids, "contains": "CONTAINS", "status": "ALL"},
     }
