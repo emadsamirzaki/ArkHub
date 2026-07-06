@@ -15,7 +15,7 @@ import streamlit as st
 from systems.utils.db import db_cursor
 
 _COLUMNS = ("project_id, from_date, to_date, total_hours, monthly_hours, "
-            "updated_at, clockify_project_id")
+            "updated_at, clockify_project_ids")
 
 
 def _row_to_dict(row: dict | None) -> dict | None:
@@ -26,6 +26,10 @@ def _row_to_dict(row: dict | None) -> dict | None:
         r["monthly_hours"] = json.loads(r["monthly_hours"])
     if r.get("monthly_hours") is None:
         r["monthly_hours"] = {}
+    if isinstance(r.get("clockify_project_ids"), str):
+        r["clockify_project_ids"] = json.loads(r["clockify_project_ids"])
+    if r.get("clockify_project_ids") is None:
+        r["clockify_project_ids"] = []
     r["total_hours"] = float(r["total_hours"]) if r.get("total_hours") is not None else 0.0
     return r
 
@@ -53,42 +57,44 @@ def upsert_contract(
     to_date: str,
     total_hours: float,
     monthly_hours: dict,
-    clockify_project_id: str | None = None,
+    clockify_project_ids: list[str] | None = None,
 ) -> dict:
     """
-    Insert or update a contract. `clockify_project_id=None` keeps any existing
+    Insert or update a contract. `clockify_project_ids=None` keeps any existing
     mapping (so saving monthly hours manually never wipes the Clockify link).
     """
     updated_at = datetime.now().isoformat()
+    ids_param = (psycopg2.extras.Json(clockify_project_ids)
+                 if clockify_project_ids is not None else None)
     with db_cursor() as cur:
         cur.execute(
             """
             INSERT INTO project_contracts
                 (project_id, from_date, to_date, total_hours, monthly_hours,
-                 updated_at, clockify_project_id)
+                 updated_at, clockify_project_ids)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             ON CONFLICT (project_id) DO UPDATE SET
-                from_date           = EXCLUDED.from_date,
-                to_date             = EXCLUDED.to_date,
-                total_hours         = EXCLUDED.total_hours,
-                monthly_hours       = EXCLUDED.monthly_hours,
-                updated_at          = EXCLUDED.updated_at,
-                clockify_project_id = COALESCE(EXCLUDED.clockify_project_id,
-                                               project_contracts.clockify_project_id)
+                from_date            = EXCLUDED.from_date,
+                to_date              = EXCLUDED.to_date,
+                total_hours          = EXCLUDED.total_hours,
+                monthly_hours        = EXCLUDED.monthly_hours,
+                updated_at           = EXCLUDED.updated_at,
+                clockify_project_ids = COALESCE(EXCLUDED.clockify_project_ids,
+                                                project_contracts.clockify_project_ids)
             """,
             (project_id, from_date, to_date, float(total_hours),
-             psycopg2.extras.Json(monthly_hours), updated_at, clockify_project_id),
+             psycopg2.extras.Json(monthly_hours), updated_at, ids_param),
         )
     get_contract.clear()
     get_all_contracts.clear()
     return {
-        "project_id":          project_id,
-        "from_date":           from_date,
-        "to_date":             to_date,
-        "total_hours":         float(total_hours),
-        "monthly_hours":       monthly_hours,
-        "updated_at":          updated_at,
-        "clockify_project_id": clockify_project_id,
+        "project_id":           project_id,
+        "from_date":            from_date,
+        "to_date":              to_date,
+        "total_hours":          float(total_hours),
+        "monthly_hours":        monthly_hours,
+        "updated_at":           updated_at,
+        "clockify_project_ids": clockify_project_ids if clockify_project_ids is not None else [],
     }
 
 

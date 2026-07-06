@@ -81,6 +81,23 @@ CREATE TABLE IF NOT EXISTS project_contracts (
 );
 
 ALTER TABLE project_contracts ADD COLUMN IF NOT EXISTS clockify_project_id TEXT;
+
+ALTER TABLE project_contracts ADD COLUMN IF NOT EXISTS clockify_project_ids JSONB;
+ALTER TABLE project_contracts ALTER COLUMN clockify_project_ids DROP NOT NULL;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'project_contracts' AND column_name = 'clockify_project_id'
+    ) THEN
+        UPDATE project_contracts
+        SET clockify_project_ids = jsonb_build_array(clockify_project_id)
+        WHERE clockify_project_id IS NOT NULL
+          AND (clockify_project_ids IS NULL OR clockify_project_ids = '[]'::jsonb);
+        ALTER TABLE project_contracts DROP COLUMN clockify_project_id;
+    END IF;
+END $$;
 """
 
 _KEEPALIVE_INTERVAL = 240  # 4 minutes — resets Neon's 5-min auto-suspend timer

@@ -158,13 +158,13 @@ def _month_range_iso(month_key: str) -> tuple[str, str]:
     return start, end
 
 
-def _summary_totals(workspace_id: str, project_id: str, start_iso: str, end_iso: str) -> dict:
-    """POST a summary report filtered to one project; return the totals[0] dict (or {})."""
+def _summary_totals(workspace_id: str, project_ids: list[str], start_iso: str, end_iso: str) -> dict:
+    """POST a summary report filtered to one or more projects; return the totals[0] dict (or {})."""
     body = {
         "dateRangeStart": start_iso,
         "dateRangeEnd":   end_iso,
         "summaryFilter":  {"groups": ["PROJECT"]},
-        "projects":       {"ids": [project_id], "contains": "CONTAINS", "status": "ALL"},
+        "projects":       {"ids": project_ids, "contains": "CONTAINS", "status": "ALL"},
     }
     data = _post(f"{_REPORTS}/workspaces/{workspace_id}/reports/summary", body)
     totals = data.get("totals") or []
@@ -173,20 +173,20 @@ def _summary_totals(workspace_id: str, project_id: str, start_iso: str, end_iso:
 
 def monthly_billable_hours(
     workspace_id: str,
-    project_id: str,
+    project_ids: list[str],
     month_keys: list[str],
     current_month_key: str,
 ) -> dict[str, float]:
     """
-    Billable hours per month for a project. Months after `current_month_key`
-    are skipped (they're zero / not yet logged).
+    Billable hours per month, summed across `project_ids`. Months after
+    `current_month_key` are skipped (they're zero / not yet logged).
     """
     result: dict[str, float] = {}
     for key in month_keys:
         if key > current_month_key:
             continue
         start, end = _month_range_iso(key)
-        totals = _summary_totals(workspace_id, project_id, start, end)
+        totals = _summary_totals(workspace_id, project_ids, start, end)
         seconds = float(totals.get("totalBillableTime") or 0)
         result[key] = round(seconds / _SECONDS_PER_HOUR, 2)
     return result

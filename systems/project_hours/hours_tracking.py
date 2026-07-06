@@ -93,33 +93,37 @@ def _clockify_sync_section(project_id: str, project_name: str,
 
     names   = {p["id"]: p["name"] for p in cprojects}
     options = [p["id"] for p in cprojects]
-    stored  = contract.get("clockify_project_id")
+    stored  = contract.get("clockify_project_ids") or []
     auto    = clockify.match_project(project_name, cprojects)
-    default_id = stored or auto
-    idx = options.index(default_id) if default_id in options else 0
+    default_ids = stored or ([auto] if auto else [])
+    default_ids = [i for i in default_ids if i in names]
 
     c1, c2 = st.columns([3, 1], vertical_alignment="bottom")
     with c1:
-        sel_cid = st.selectbox(
-            "Clockify project", options, index=idx,
+        sel_cids = st.multiselect(
+            "Clockify projects", options, default=default_ids,
             format_func=lambda i: names[i], key=f"cf_proj_{project_id}",
         )
     with c2:
         do_sync = st.button("🔄 Sync from Clockify", type="primary", key=f"cf_sync_{project_id}")
 
     if stored:
-        st.caption(f"Linked to Clockify project **{names.get(stored, stored)}** · pulls billable hours.")
+        linked = ", ".join(f"**{names.get(i, i)}**" for i in stored)
+        st.caption(f"Linked to Clockify project(s) {linked} · pulls combined billable hours.")
     elif auto:
         st.caption(f"Auto-matched by name → **{names[auto]}**. Sync to confirm & save the link.")
     else:
-        st.caption("No name match — pick the Clockify project above, then Sync.")
+        st.caption("No name match — pick one or more Clockify projects above, then Sync.")
 
     if do_sync:
+        if not sel_cids:
+            st.error("Pick at least one Clockify project before syncing.")
+            return
         today = date.today()
         cur_month = f"{today.year:04d}-{today.month:02d}"
         try:
             with st.spinner("Pulling billable hours from Clockify…"):
-                pulled = clockify.monthly_billable_hours(wid, sel_cid, keys, cur_month)
+                pulled = clockify.monthly_billable_hours(wid, sel_cids, keys, cur_month)
         except clockify.ClockifyError as e:
             st.error(str(e))
             return
@@ -127,7 +131,7 @@ def _clockify_sync_section(project_id: str, project_name: str,
         merged.update(pulled)
         upsert_contract(
             project_id, contract["from_date"], contract["to_date"],
-            contract["total_hours"], merged, clockify_project_id=sel_cid,
+            contract["total_hours"], merged, clockify_project_ids=sel_cids,
         )
         st.success(
             f"✅ Synced {len(pulled)} month(s) — {sum(pulled.values()):,.1f} billable h total. "
