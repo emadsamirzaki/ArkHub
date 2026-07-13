@@ -16,8 +16,11 @@ ON_TRACK_THRESHOLD = 85.0
 NOTE_ICONS = {"Note": "📝", "Red Flag": "🚩", "Success Story": "🏆"}
 
 
-def _render_hero(score: float, on_count: int, total: int) -> None:
+def _render_hero(score: float, on_count: int, total: int, note_counts: dict) -> None:
     on_track = score >= ON_TRACK_THRESHOLD
+    red   = note_counts.get("Red Flag", 0)
+    notes = note_counts.get("Note", 0)
+    wins  = note_counts.get("Success Story", 0)
     with st.container(border=True):
         c1, c2 = st.columns([1, 2], vertical_alignment="center")
         with c1:
@@ -28,6 +31,11 @@ def _render_hero(score: float, on_count: int, total: int) -> None:
             else:
                 st.markdown("### :red[🔴 Needs Attention]")
             st.caption(f"{on_count} of {total} checked-in projects on track")
+            st.markdown(
+                f":red-badge[🚩 {red} Red Flag{'' if red == 1 else 's'}] &nbsp; "
+                f":gray-badge[📝 {notes} Note{'' if notes == 1 else 's'}] &nbsp; "
+                f":green-badge[🏆 {wins} Success Stor{'y' if wins == 1 else 'ies'}]"
+            )
     if not on_track:
         st.error("⚠️ Below 85% threshold — action required in this L10 meeting")
 
@@ -48,8 +56,15 @@ def _project_card(project: dict, entry: dict | None) -> None:
         st.markdown(ui.status_badge(entry["health_status"]))
 
         if entry.get("note_type") and entry.get("note_text"):
-            n_icon = NOTE_ICONS.get(entry["note_type"], "📝")
-            st.caption(f"{n_icon} **{entry['note_type']}:** {entry['note_text']}")
+            note_type = entry["note_type"]
+            n_icon    = NOTE_ICONS.get(note_type, "📝")
+            note_body = f"{n_icon} **{note_type}:** {entry['note_text']}"
+            if note_type == "Red Flag":
+                st.error(note_body)
+            elif note_type == "Success Story":
+                st.success(note_body)
+            else:
+                st.caption(note_body)
 
 
 def main() -> None:
@@ -105,10 +120,16 @@ def main() -> None:
     total_checked = len(projects_with_entries)
     score = (on_track_count / total_checked * 100) if total_checked else 0.0
 
+    note_counts: dict[str, int] = {}
+    for p in projects_with_entries:
+        nt = entry_by_project[p["id"]].get("note_type")
+        if nt in NOTE_ICONS:
+            note_counts[nt] = note_counts.get(nt, 0) + 1
+
     if total_checked == 0:
         st.warning(f"No check-ins found for **{week_label}**.")
     else:
-        _render_hero(score, on_track_count, total_checked)
+        _render_hero(score, on_track_count, total_checked, note_counts)
 
     if not projects:
         st.warning("No active projects. Add them in **Project Management**.")

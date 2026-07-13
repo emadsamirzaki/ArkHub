@@ -123,7 +123,10 @@ def _clockify_sync_section(project_id: str, project_name: str,
         cur_month = f"{today.year:04d}-{today.month:02d}"
         try:
             with st.spinner("Pulling billable hours from Clockify…"):
-                pulled = clockify.monthly_billable_hours(wid, sel_cids, keys, cur_month)
+                pulled = clockify.monthly_billable_hours(
+                    wid, sel_cids, keys, cur_month,
+                    contract["from_date"], contract["to_date"],
+                )
         except clockify.ClockifyError as e:
             st.error(str(e))
             return

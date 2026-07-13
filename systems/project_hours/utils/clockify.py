@@ -158,6 +158,16 @@ def _month_range_iso(month_key: str) -> tuple[str, str]:
     return start, end
 
 
+def _date_start_iso(iso_date: str) -> str:
+    """'2025-03-15' -> '2025-03-15T00:00:00.000Z'."""
+    return f"{iso_date[:10]}T00:00:00.000Z"
+
+
+def _date_end_iso(iso_date: str) -> str:
+    """'2025-03-15' -> '2025-03-15T23:59:59.999Z'."""
+    return f"{iso_date[:10]}T23:59:59.999Z"
+
+
 def _summary_totals(workspace_id: str, project_ids: list[str], start_iso: str, end_iso: str) -> dict:
     """POST a summary report filtered to one or more projects, billable entries only."""
     body = {
@@ -177,16 +187,26 @@ def monthly_billable_hours(
     project_ids: list[str],
     month_keys: list[str],
     current_month_key: str,
+    contract_from_date: str,
+    contract_to_date: str,
 ) -> dict[str, float]:
     """
     Billable hours per month, summed across `project_ids`. Months after
     `current_month_key` are skipped (they're zero / not yet logged).
+
+    The first and last month are clipped to `contract_from_date` /
+    `contract_to_date` so hours logged to the same Clockify project(s) outside
+    the contract period (e.g. before the retainer started) aren't counted.
     """
     result: dict[str, float] = {}
     for key in month_keys:
         if key > current_month_key:
             continue
         start, end = _month_range_iso(key)
+        if key == month_keys[0]:
+            start = _date_start_iso(contract_from_date)
+        if key == month_keys[-1]:
+            end = _date_end_iso(contract_to_date)
         totals = _summary_totals(workspace_id, project_ids, start, end)
         seconds = float(totals.get("totalBillableTime") or 0)
         result[key] = round(seconds / _SECONDS_PER_HOUR, 2)

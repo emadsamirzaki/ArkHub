@@ -79,6 +79,8 @@ def main() -> None:
     st.divider()
 
     projects = get_active_projects()
+    # Group by PM so each PM's projects sit together (name as tie-breaker).
+    projects.sort(key=lambda p: (p["pm"].lower(), p["name"].lower()))
     if not projects:
         st.warning(
             "No active projects found. "
