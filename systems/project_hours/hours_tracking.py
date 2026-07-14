@@ -14,8 +14,10 @@ from systems.arkscore.utils.project_store import get_retainer_projects
 from systems.project_hours.utils import clockify
 from systems.project_hours.utils.calc import month_keys, month_label, summarize
 from systems.project_hours.utils.constants import (
+    STATUS_ABOVE,
     STATUS_COLOR_NAMES,
     STATUS_ICONS,
+    STATUS_IN_RANGE,
     TOLERANCE,
 )
 from systems.project_hours.utils.contract_store import (
@@ -37,15 +39,30 @@ def _pace_hero(s: dict) -> None:
     color  = STATUS_COLOR_NAMES.get(status, "gray")
     icon   = STATUS_ICONS.get(status, "")
     var    = s["variance"]
-    sign   = "+" if var >= 0 else "−"
     with st.container(border=True):
         st.caption("BURN PACE")
         st.markdown(f"### :{color}[{icon} {status}]")
-        st.markdown(
-            f"{_fmt(s['burned_to_date'])} h burned vs {_fmt(s['expected_to_date'])} h expected "
-            f"after {s['months_completed']} of {s['total_months']} months　·　"
-            f":{color}[**{sign}{_fmt(abs(var))} h**]"
-        )
+        if status == STATUS_IN_RANGE:
+            detail = (
+                f"{_fmt(s['burned_to_date'])} h burned　·　on pace through "
+                f"month {s['months_started']} of {s['total_months']} "
+                f"({_fmt(s['avg_monthly'])} h/mo allotment)"
+            )
+        elif status == STATUS_ABOVE:
+            detail = (
+                f"{_fmt(s['burned_to_date'])} h burned vs "
+                f"{_fmt(s['expected_through_month'])} h allotted through "
+                f"month {s['months_started']} of {s['total_months']}　·　"
+                f":{color}[**+{_fmt(abs(var))} h**]"
+            )
+        else:  # Below pace
+            detail = (
+                f"{_fmt(s['burned_to_date'])} h burned vs "
+                f"{_fmt(s['expected_to_date'])} h expected after "
+                f"{s['months_completed']} of {s['total_months']} completed months　·　"
+                f":{color}[**−{_fmt(abs(var))} h**]"
+            )
+        st.markdown(detail)
 
 
 def _month_table(per_month: list[dict]) -> None:
@@ -257,9 +274,17 @@ def main() -> None:
                  help=f"{_fmt(s['total_hours'])} h ÷ {s['total_months']} months", border=True)
     r1[1].metric("Burned to Date", f"{_fmt(s['burned_to_date'])} h",
                  help=f"of {_fmt(s['total_hours'])} h total", border=True)
-    r1[2].metric("Variance vs Expected",
-                 f"{'+' if s['variance'] >= 0 else '−'}{_fmt(abs(s['variance']))} h",
-                 help=f"expected {_fmt(s['expected_to_date'])} h by now", border=True)
+    if s["pace_status"] == STATUS_IN_RANGE:
+        var_display = "On pace"
+        var_help = (f"within the pace band: {_fmt(s['expected_to_date'])}–"
+                    f"{_fmt(s['expected_through_month'])} h through month "
+                    f"{s['months_started']} of {s['total_months']}")
+    else:
+        var = s["variance"]
+        ref = s["expected_through_month"] if var >= 0 else s["expected_to_date"]
+        var_display = f"{'+' if var >= 0 else '−'}{_fmt(abs(var))} h"
+        var_help = f"vs {_fmt(ref)} h allotted so far"
+    r1[2].metric("Variance vs Expected", var_display, help=var_help, border=True)
 
     r2 = st.columns(3)
     r2[0].metric("Hours Remaining", f"{_fmt(s['remaining_hours'])} h",

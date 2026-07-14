@@ -67,8 +67,18 @@ def summarize(contract: dict, today: date | None = None) -> dict:
     """
     Compute pace metrics for a contract.
 
-    Expectation is based on *completed* months only (the current month is treated
-    as in-progress), so a project burning on pace mid-month isn't flagged behind.
+    Pace uses a *band* around the in-progress month rather than a single expected
+    figure:
+
+    * floor   = allotment for fully **completed** months (`expected_to_date`)
+    * ceiling = allotment including the current **in-progress** month
+                (`expected_through_month`)
+
+    A project is only "Below pace" when it falls under the floor (hours already
+    due) and only "Above pace" when it burns past the ceiling (a full month's
+    allotment ahead). In between — including any normal burn during the current
+    month — it is "In range". This avoids both false "behind" flags early in a
+    month and the false "ahead" flag that a zero expectation produced in month 1.
     """
     today = today or date.today()
 
@@ -81,11 +91,23 @@ def summarize(contract: dict, today: date | None = None) -> dict:
     burned_to_date = float(sum(float(v or 0) for v in monthly.values()))
 
     today_key        = f"{today.year:04d}-{today.month:02d}"
-    months_completed = min(sum(1 for k in keys if k < today_key), total_months)
+    months_completed = min(sum(1 for k in keys if k < today_key),  total_months)
+    # Months that have *begun* (completed months + the current in-progress one,
+    # when the contract period covers it). Forms the upper edge of the pace band.
+    months_started   = min(sum(1 for k in keys if k <= today_key), total_months)
 
-    expected_to_date = avg_monthly * months_completed
-    variance         = burned_to_date - expected_to_date
-    pace_status      = _classify(burned_to_date, expected_to_date)
+    expected_to_date       = avg_monthly * months_completed   # floor
+    expected_through_month = avg_monthly * months_started      # ceiling
+
+    if expected_to_date > 0 and burned_to_date < expected_to_date * (1 - TOLERANCE):
+        pace_status = STATUS_BELOW
+        variance    = burned_to_date - expected_to_date
+    elif burned_to_date > expected_through_month * (1 + TOLERANCE):
+        pace_status = STATUS_ABOVE
+        variance    = burned_to_date - expected_through_month
+    else:
+        pace_status = STATUS_IN_RANGE
+        variance    = 0.0
 
     remaining_hours  = total_hours - burned_to_date
     remaining_months = total_months - months_completed
@@ -96,10 +118,15 @@ def summarize(contract: dict, today: date | None = None) -> dict:
     per_month = []
     for k in keys:
         burned = float(monthly.get(k, 0) or 0)
-        # A month that hasn't been reached yet (and has nothing logged) is neutral,
-        # not "below" — otherwise every future month of a long contract shows red.
-        if k >= today_key and burned == 0:
+        if burned == 0 and k >= today_key:
+            # Not reached yet / nothing logged — neutral, not "below", otherwise
+            # every future month of a long contract shows red.
             status = STATUS_UPCOMING
+        elif k >= today_key:
+            # Current (in-progress) or future month with hours logged: an
+            # incomplete month is never "below" — only "above" once it burns
+            # past a full month's allotment.
+            status = STATUS_ABOVE if burned > avg_monthly * (1 + TOLERANCE) else STATUS_IN_RANGE
         else:
             status = _classify(burned, avg_monthly)
         per_month.append({
@@ -116,7 +143,9 @@ def summarize(contract: dict, today: date | None = None) -> dict:
         "avg_monthly":              avg_monthly,
         "burned_to_date":           burned_to_date,
         "months_completed":         months_completed,
+        "months_started":           months_started,
         "expected_to_date":         expected_to_date,
+        "expected_through_month":   expected_through_month,
         "variance":                 variance,
         "pace_status":              pace_status,
         "remaining_hours":          remaining_hours,
